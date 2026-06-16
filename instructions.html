@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rack Survey — Engineer Instructions</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+
+  .page { max-width: 680px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; }
+  .logo svg { flex-shrink: 0; }
+  .logo-text h1 { font-size: 18px; font-weight: 700; }
+  .logo-text p { font-size: 13px; color: #64748b; }
+
+  h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 14px; color: #64748b; margin-bottom: 28px; }
+
+  .phase { margin-bottom: 48px; }
+  .phase-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #4f6ef7; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+  .phase-label .dot { width: 8px; height: 8px; border-radius: 50%; background: #4f6ef7; }
+
+  .step { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: #1e293b; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-num.green { background: #16a34a; }
+  .step-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .step-body p { font-size: 14px; color: #475569; }
+  .step-body ul { font-size: 14px; color: #475569; padding-left: 18px; margin-top: 4px; }
+  .step-body ul li { margin-bottom: 2px; }
+
+  .tip { background: #eff6ff; border-left: 3px solid #4f6ef7; border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #1e40af; }
+  .tip strong { display: block; margin-bottom: 2px; }
+
+  .warn { background: #fff7ed; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #92400e; }
+  .warn strong { display: block; margin-bottom: 2px; }
+
+  .divider { height: 1px; background: #e2e8f0; margin: 40px 0; }
+
+  .url-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; }
+  .url-card-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .url-card-icon.blue { background: #eff6ff; }
+  .url-card-icon.green { background: #f0fdf4; }
+  .url-card-info h3 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .url-card-info a { font-size: 13px; color: #4f6ef7; word-break: break-all; }
+
+  .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .photo-type { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
+  .photo-type .icon { font-size: 24px; margin-bottom: 4px; }
+  .photo-type h4 { font-size: 13px; font-weight: 600; }
+  .photo-type p { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  .checklist { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; }
+  .checklist h4 { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .checklist-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 14px; }
+  .checklist-item:last-child { margin-bottom: 0; }
+  .check { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
+
+  @media print {
+    .page { padding: 24px; }
+    .url-card-info a::after { content: attr(href); }
+  }
+  @media (max-width: 480px) {
+    .photo-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="1.8"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/><circle cx="18" cy="5" r="0.7" fill="#4f6ef7"/><circle cx="18" cy="12" r="0.7" fill="#4f6ef7"/><circle cx="18" cy="19" r="0.7" fill="#4f6ef7"/></svg>
+    <div class="logo-text">
+      <h1>Rack Survey Tool</h1>
+      <p>Engineer Field Guide</p>
+    </div>
+  </div>
+
+  <!-- URLs -->
+  <div class="url-card">
+    <div class="url-card-icon blue">📱</div>
+    <div class="url-card-info">
+      <h3>Field Capture — open on your phone</h3>
+      <a href="field.html" id="field-url">field.html</a>
+    </div>
+  </div>
+  <div class="url-card">
+    <div class="url-card-icon green">💻</div>
+    <div class="url-card-info">
+      <h3>Desktop Scanner — open on your laptop</h3>
+      <a href="index.html" id="desktop-url">index.html</a>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-label"><span class="dot"></span>Phase 1 — In the Datacenter (Phone)</div>
+    <h2>Capturing the rack</h2>
+    <p class="subtitle">Do this for each rack before moving to the next one.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Open the Field Capture app on your phone</h3>
+        <p>Go to the URL above in Chrome or Safari. Tap <strong>Add to Home Screen</strong> from your browser menu for quicker access next time.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Tap + to start a new rack survey</h3>
+        <p>Enter the <strong>Rack ID</strong> exactly as labelled on the rack (e.g. <code>R04</code>, <code>A-02-L</code>). Add a location note if helpful (e.g. "Level 2 Aisle B").</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Take rack overview photos</h3>
+        <p>Tap the two photo slots to take a wide shot of the full rack from both sides.</p>
+        <div class="photo-grid">
+          <div class="photo-type"><div class="icon">🔵</div><h4>Front of Rack</h4><p>Full rack, face-on</p></div>
+          <div class="photo-type"><div class="icon">🟡</div><h4>Back of Rack</h4><p>Rear cabling side</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Add each piece of equipment</h3>
+        <p>Tap <strong>Add Equipment Item</strong> for each server, switch, UPS, or other device. For each item:</p>
+        <ul>
+          <li>Enter the <strong>Start U</strong> and <strong>End U</strong> position (check the rack U markings)</li>
+          <li>Select the <strong>category</strong> (Server, Network Switch, UPS, etc.)</li>
+          <li>Take one or more <strong>close-up photos</strong> of the front label and serial number tag — the more readable the better</li>
+          <li>Add a note if needed (hostname sticker, asset tag)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>📸 Photo tips for best results</strong>
+      Make sure the label is in focus and well-lit. Use your phone torch if the rack is dark. Include the serial number barcode if there is one. It's fine to take multiple photos of the same item from different angles.
+    </div>
+
+    <div class="warn">
+      <strong>⚠️ Don't skip the U position</strong>
+      Always enter the Start U before saving — this is what tells the system exactly where in the rack each item sits. Check the metal U markings on the rack rail.
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Export the session when the rack is done</h3>
+        <p>Tap <strong>Export</strong> (top right) → <strong>Download Session JSON</strong>. This saves a file to your phone. Send it to yourself via email, Slack, or WhatsApp — whatever you use.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Repeat for the next rack</h3>
+        <p>Tap the back arrow to return to the home screen, then tap + to start a new survey for the next rack. Each rack is a separate session.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-label"><div class="dot" style="background:#16a34a"></div><span style="color:#16a34a">Phase 2 — Back at Your Desk (Laptop)</span></div>
+    <h2>Processing into Excel</h2>
+    <p class="subtitle">Do this after you've finished all the racks, or at the end of each day.</p>
+
+    <div class="step">
+      <div class="step-num green">1</div>
+      <div class="step-body">
+        <h3>Open the Desktop Scanner on your laptop</h3>
+        <p>Go to the desktop URL above. Paste your <strong>Anthropic API key</strong> in the field at the top — ask your team lead if you don't have one.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num green">2</div>
+      <div class="step-body">
+        <h3>Import your session files</h3>
+        <p>Click <strong>Import Field Session</strong> and select the JSON file you exported from your phone. Repeat for each rack session. They'll all appear as cards on screen.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num green">3</div>
+      <div class="step-body">
+        <h3>Click Scan on each session</h3>
+        <p>The AI reads each photo and extracts the part number and serial number. The rack number, U position, and category you entered in the field are already filled in — the AI only needs to read the labels.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num green">4</div>
+      <div class="step-body">
+        <h3>Review and correct the table</h3>
+        <p>Check any rows where the part number or serial number looks wrong or is blank. You can click any cell to edit it directly. If a serial number couldn't be read, go back to your photo or check the equipment physically.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num green">5</div>
+      <div class="step-body">
+        <h3>Export to Excel</h3>
+        <p>Click <strong>Export to Excel</strong>. The file downloads as <code>rack-assets-YYYY-MM-DD.xlsx</code> with all racks, U positions, categories, part numbers, and serial numbers.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Pre-survey checklist -->
+  <h2 style="margin-bottom:16px">Before you go in</h2>
+  <div class="checklist">
+    <h4>Pre-survey checklist</h4>
+    <div class="checklist-item"><div class="check"></div><span>Phone charged to at least 50%</span></div>
+    <div class="checklist-item"><div class="check"></div><span>Field Capture app bookmarked or on home screen</span></div>
+    <div class="checklist-item"><div class="check"></div><span>Know the rack IDs you're surveying today</span></div>
+    <div class="checklist-item"><div class="check"></div><span>Torch / flashlight available (phone torch is fine)</span></div>
+    <div class="checklist-item"><div class="check"></div><span>Enough phone storage for photos (each session ~50–100 MB)</span></div>
+  </div>
+
+</div>
+
+<script>
+  const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+  const fieldUrl = base + 'field.html';
+  const desktopUrl = base + 'index.html';
+  document.getElementById('field-url').href = fieldUrl;
+  document.getElementById('field-url').textContent = fieldUrl;
+  document.getElementById('desktop-url').href = desktopUrl;
+  document.getElementById('desktop-url').textContent = desktopUrl;
+</script>
+</body>
+</html>
