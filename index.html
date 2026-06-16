@@ -90,13 +90,13 @@
 <header>
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/><circle cx="18" cy="5" r="0.5" fill="#4f6ef7"/><circle cx="18" cy="12" r="0.5" fill="#4f6ef7"/><circle cx="18" cy="19" r="0.5" fill="#4f6ef7"/></svg>
   <h1>Rack Asset Scanner</h1>
-  <span>Claude Vision → Excel</span>
+  <span>AI Builder → Excel</span>
 </header>
 
 <div class="container">
   <div class="api-bar">
-    <label>Anthropic API Key</label>
-    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <label>Power Automate Flow URL</label>
+    <input type="text" id="apiKey" placeholder="https://prod-xx.westus.logic.azure.com/workflows/..." autocomplete="off" spellcheck="false">
   </div>
 
   <!-- Import session banner (hidden until JSON loaded) -->
@@ -125,7 +125,7 @@
       <span id="scanIcon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       </span>
-      Scan with Claude
+      Scan with AI Builder
     </button>
     <button class="btn btn-success" id="exportBtn" disabled>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -183,10 +183,10 @@ const progressWrap = document.getElementById('progressWrap');
 const progressBar = document.getElementById('progressBar');
 const scanIcon = document.getElementById('scanIcon');
 
-// Persist API key
-const savedKey = localStorage.getItem('rack_scanner_api_key');
+// Persist Flow URL
+const savedKey = localStorage.getItem('rack_scanner_flow_url');
 if (savedKey) apiKeyEl.value = savedKey;
-apiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_api_key', apiKeyEl.value));
+apiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_flow_url', apiKeyEl.value));
 
 // Drag & drop
 dropzone.addEventListener('click', () => fileInput.click());
@@ -284,8 +284,8 @@ document.getElementById('inlineAddBtn')?.addEventListener('click', addEmptyRow);
 
 // Scan
 scanBtn.addEventListener('click', async () => {
-  const apiKey = apiKeyEl.value.trim();
-  if (!apiKey) { toast('Enter your Anthropic API key first', 'error'); return; }
+  const flowUrl = apiKeyEl.value.trim();
+  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
 
   const toScan = images.filter(img => img.status === 'ready');
   if (!toScan.length) return;
@@ -301,13 +301,13 @@ scanBtn.addEventListener('click', async () => {
     img.status = 'processing';
     renderPreviews();
     try {
-      const extracted = await callClaude(apiKey, img.dataUrl);
-      extracted.forEach(row => rows.push({ ...row, source: img.file.name.slice(0, 15) }));
+      const extracted = await callAIBuilder(flowUrl, img.dataUrl);
+      extracted.forEach(row => rows.push({ ...row, source: (img.label || img.file?.name || '').slice(0, 15) }));
       img.status = 'done';
     } catch (e) {
       img.status = 'error';
       console.error(e);
-      toast(`Error on ${img.file.name}: ${e.message}`, 'error');
+      toast(`Error on ${img.label || img.file?.name}: ${e.message}`, 'error');
     }
     done++;
     progressBar.style.width = `${(done / toScan.length) * 100}%`;
@@ -322,68 +322,74 @@ scanBtn.addEventListener('click', async () => {
   if (rows.length) toast(`Extracted ${rows.length} asset(s) total`, 'success');
 });
 
-async function callClaude(apiKey, dataUrl) {
-  const base64 = dataUrl.split(',')[1];
-  const mimeType = dataUrl.split(';')[0].split(':')[1];
+// ── AI Builder via Power Automate ─────────────
+// Sends image as text/plain to avoid CORS preflight on the flow URL.
+// Flow must respond with { text: "...raw ocr text..." }
 
-  const prompt = `You are an expert at reading server rack labels, asset tags, and equipment identifiers.
-
-Examine this image carefully. Extract ALL visible server rack equipment entries.
-
-For each item you can identify, return a JSON object with these fields:
-- rack: rack identifier/number (e.g. "R01", "Rack 3", "A-02") — use "" if not visible
-- startU: starting rack unit number as integer (e.g. 1) — use null if not visible
-- endU: ending rack unit number as integer (e.g. 2, or same as startU for 1U) — use null if not visible
-- category: one of "Server", "Network Switch", "UPS", "Storage", "PDU", "KVM", "Other"
-- partNumber: manufacturer part/model number (e.g. "867960-B21", "N9K-C9396PX") — use "" if not visible
-- serialNumber: serial number from label (e.g. "CZJ1234567", "SGH123456") — use "" if not visible
-- notes: any other relevant label text (hostname, asset tag, location) — use "" if none
-
-Return ONLY a JSON array, no markdown, no explanation. If no equipment is identifiable, return [].
-
-Example output:
-[{"rack":"R01","startU":3,"endU":4,"category":"Server","partNumber":"867960-B21","serialNumber":"CZJ1234567","notes":"web-prod-01"},{"rack":"R01","startU":1,"endU":1,"category":"Network Switch","partNumber":"N9K-C9396PX","serialNumber":"FOC2134L12T","notes":""}]`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callFlow(flowUrl, base64, mimeType) {
+  const body = JSON.stringify({ image: base64, mimeType });
+  const res = await fetch(flowUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-8',
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: prompt }
-        ]
-      }]
-    })
+    headers: { 'Content-Type': 'text/plain' },
+    body
   });
+  if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.text && data.text !== '') throw new Error('Flow response missing "text" field — check your flow Response action');
+  return data.text;
+}
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${res.status}`);
+// Parse serial number and part number from raw AI Builder OCR text
+function parseOCRText(ocrText) {
+  const t = ocrText;
+  let serialNumber = '';
+  let partNumber = '';
+  let notes = '';
+
+  // Serial number — look for label then grab next token
+  const snMatch = t.match(/(?:S\/N|SN|Serial\s*(?:Number|No\.?|#)?)[\s:]+([A-Z0-9]{5,20})/i);
+  if (snMatch) serialNumber = snMatch[1].trim();
+
+  // Part number — explicit label first
+  const pnLabelMatch = t.match(/(?:P\/N|PN|Part\s*(?:Number|No\.?|#)|Model\s*(?:No\.?)?)[\s:]+([A-Z0-9][A-Z0-9\-\.]{3,24})/i);
+  if (pnLabelMatch) {
+    partNumber = pnLabelMatch[1].trim();
+  } else {
+    // Common format patterns without a label
+    const hpMatch   = t.match(/\b(\d{6}-[A-Z]\d{2})\b/);          // HP: 867960-B21
+    const ciscoMatch = t.match(/\b([A-Z]{2,}-[A-Z0-9]{2,}-[A-Z0-9]{2,})\b/); // Cisco: N9K-C9396PX
+    const dellMatch  = t.match(/\b([A-Z0-9]{5,7})\b.*?(?:Service Tag|SVCTAG)/i);
+    partNumber = (hpMatch || ciscoMatch || dellMatch)?.[1] ?? '';
   }
 
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? '[]';
-  // Strip any accidental markdown fences
-  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  const parsed = JSON.parse(cleaned);
-  return parsed.map(r => ({
-    rack: r.rack ?? '',
-    startU: r.startU != null ? String(r.startU) : '',
-    endU: r.endU != null ? String(r.endU) : '',
-    category: CATEGORIES.includes(r.category) ? r.category : 'Other',
-    partNumber: r.partNumber ?? '',
-    serialNumber: r.serialNumber ?? '',
-    notes: r.notes ?? '',
+  // Guess category from model name keywords in OCR text
+  let category = 'Other';
+  const tl = t.toLowerCase();
+  if (/proliant|poweredge|primergy|thinkserver|ucs\s*c|blade/.test(tl)) category = 'Server';
+  else if (/catalyst|nexus|arista|juniper|ex\d|qfx|switch|sfp/.test(tl)) category = 'Network Switch';
+  else if (/ups|uninterruptible|powerware|symmetra|apc/.test(tl)) category = 'UPS';
+  else if (/powervault|msa|ds\d{4}|storage|array/.test(tl)) category = 'Storage';
+  else if (/pdu|power\s*distribution/.test(tl)) category = 'PDU';
+  else if (/kvm|avocent|raritan/.test(tl)) category = 'KVM';
+
+  // Hostname / asset tag hints
+  const hostMatch = t.match(/(?:hostname|host|asset|tag)[\s:]+(\S+)/i);
+  if (hostMatch) notes = hostMatch[1].trim();
+
+  return { serialNumber, partNumber, category, notes };
+}
+
+async function callAIBuilder(flowUrl, dataUrl) {
+  const base64  = dataUrl.split(',')[1];
+  const mimeType = dataUrl.split(';')[0].split(':')[1];
+  const ocrText = await callFlow(flowUrl, base64, mimeType);
+  const { serialNumber, partNumber, category, notes } = parseOCRText(ocrText);
+  // Raw photo upload — rack/U unknown, user fills in
+  return [{
+    rack: '', startU: '', endU: '',
+    category, partNumber, serialNumber, notes,
     source: ''
-  }));
+  }];
 }
 
 // Export
@@ -489,7 +495,7 @@ function removeImportedSession(si) {
 
 async function scanSession(si) {
   const apiKey = apiKeyEl.value.trim();
-  if (!apiKey) { toast('Enter your Anthropic API key first', 'error'); return; }
+  if (!apiKey) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
 
   const entry = importedSessions[si];
   const s = entry.session;
@@ -528,7 +534,7 @@ async function scanSession(si) {
     qi.status = 'processing';
     renderPreviews();
     try {
-      const extracted = await callClaudeWithMeta(apiKey, qi.dataUrl, qi.meta);
+      const extracted = await callAIBuilderWithMeta(apiKey, qi.dataUrl, qi.meta);
       if (extracted !== null) rows.push(extracted);
       qi.status = 'done';
       entry.scannedCount++;
@@ -551,60 +557,21 @@ async function scanSession(si) {
   toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
 }
 
-async function callClaudeWithMeta(apiKey, dataUrl, meta) {
-  // Rack/U/category already known — just extract part # and serial #
-  const base64 = dataUrl.split(',')[1];
+async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
+  // Rack/U/category already known from field app — just extract part # and serial # from OCR
+  const base64  = dataUrl.split(',')[1];
   const mimeType = dataUrl.split(';')[0].split(':')[1];
+  const ocrText = await callFlow(flowUrl, base64, mimeType);
+  const { serialNumber, partNumber, notes: ocrNotes } = parseOCRText(ocrText);
 
-  const prompt = `You are reading a photo of datacenter equipment.
-
-Context already known:
-- Rack: ${meta.rack}
-- U position: ${meta.startU}${meta.startU !== meta.endU ? '–' + meta.endU : ''}
-- Category: ${meta.category}
-${meta.notes ? `- Notes: ${meta.notes}` : ''}
-
-Your task: read the label(s) visible in this photo and extract:
-1. partNumber — the manufacturer part number or model number (e.g. "867960-B21", "N9K-C9396PX"). Use "" if not visible.
-2. serialNumber — the serial number (look for "S/N", "Serial", or a barcode label). Use "" if not visible.
-3. notes — any additional label text worth capturing (hostname sticker, asset tag, etc). Use "" if none.
-
-Return ONLY a JSON object (no markdown):
-{"partNumber":"...","serialNumber":"...","notes":"..."}`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: 'claude-opus-4-8',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-        { type: 'text', text: prompt }
-      ]}]
-    })
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${res.status}`);
-  }
-
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? '{}';
-  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  const parsed = JSON.parse(cleaned);
-
-  // Merge context metadata with extracted label data
-  // If item has multiple photos, only the best result survives — deduplicate by U position
+  // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null
   const existingIdx = rows.findIndex(r => r.rack === meta.rack && r.startU === meta.startU && r.endU === meta.endU);
   if (existingIdx !== -1) {
-    // Update existing row with new data if better (non-empty wins)
     const existing = rows[existingIdx];
-    if (!existing.partNumber && parsed.partNumber) existing.partNumber = parsed.partNumber;
-    if (!existing.serialNumber && parsed.serialNumber) existing.serialNumber = parsed.serialNumber;
-    if (parsed.notes && !existing.notes.includes(parsed.notes)) existing.notes = [existing.notes, parsed.notes].filter(Boolean).join('; ');
-    return null; // signal: row already updated in place
+    if (!existing.partNumber && partNumber) existing.partNumber = partNumber;
+    if (!existing.serialNumber && serialNumber) existing.serialNumber = serialNumber;
+    if (ocrNotes && !existing.notes.includes(ocrNotes)) existing.notes = [existing.notes, ocrNotes].filter(Boolean).join('; ');
+    return null; // row updated in place
   }
 
   return {
@@ -612,9 +579,9 @@ Return ONLY a JSON object (no markdown):
     startU: meta.startU,
     endU: meta.endU,
     category: meta.category,
-    partNumber: parsed.partNumber ?? '',
-    serialNumber: parsed.serialNumber ?? '',
-    notes: [meta.notes, parsed.notes].filter(Boolean).join('; '),
+    partNumber,
+    serialNumber,
+    notes: [meta.notes, ocrNotes].filter(Boolean).join('; '),
     source: meta.rack
   };
 }
