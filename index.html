@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rack Asset Scanner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+  header { background: #1a1d2e; border-bottom: 1px solid #2d3148; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header span { font-size: 12px; color: #64748b; background: #2d3148; padding: 2px 8px; border-radius: 4px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .api-bar { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .api-bar label { font-size: 13px; color: #94a3b8; white-space: nowrap; }
+  .api-bar input { flex: 1; background: #1a1d2e; border: 1px solid #2d3148; color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; }
+  .api-bar input:focus { outline: none; border-color: #4f6ef7; }
+  .upload-zone { border: 2px dashed #2d3148; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; background: #1a1d2e; margin-bottom: 20px; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: #4f6ef7; background: #1e2240; }
+  .upload-zone input { display: none; }
+  .upload-zone svg { margin-bottom: 12px; opacity: 0.5; }
+  .upload-zone p { color: #64748b; font-size: 14px; }
+  .upload-zone p strong { color: #94a3b8; }
+  .previews { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .preview-item { position: relative; width: 120px; }
+  .preview-item img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #2d3148; }
+  .preview-item button { position: absolute; top: 4px; right: 4px; background: #ef4444; border: none; color: white; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .preview-item .status { font-size: 10px; color: #64748b; text-align: center; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-item .status.processing { color: #f59e0b; }
+  .preview-item .status.done { color: #22c55e; }
+  .preview-item .status.error { color: #ef4444; }
+  .actions { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #4f6ef7; color: white; }
+  .btn-primary:hover { background: #3b5ef0; }
+  .btn-primary:disabled { background: #2d3148; color: #4a5568; cursor: not-allowed; }
+  .btn-secondary { background: #1a1d2e; color: #94a3b8; border: 1px solid #2d3148; }
+  .btn-secondary:hover { background: #2d3148; }
+  .btn-success { background: #16a34a; color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-success:disabled { background: #2d3148; color: #4a5568; cursor: not-allowed; }
+  .btn-danger { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+  .btn-danger:hover { background: #ef444420; }
+  .spinner { width: 14px; height: 14px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #2d3148; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #1a1d2e; }
+  th { padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500; border-bottom: 1px solid #2d3148; white-space: nowrap; }
+  tr { background: #0f1117; }
+  tr:hover { background: #161929; }
+  tr:not(:last-child) td { border-bottom: 1px solid #1a1d2e; }
+  td { padding: 6px 8px; vertical-align: middle; }
+  td input, td select { background: transparent; border: 1px solid transparent; color: #e2e8f0; padding: 4px 6px; border-radius: 4px; font-size: 13px; width: 100%; font-family: inherit; }
+  td input:focus, td select:focus { outline: none; border-color: #4f6ef7; background: #1a1d2e; }
+  td select option { background: #1a1d2e; }
+  .del-row { background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 4px 8px; border-radius: 4px; opacity: 0.6; }
+  .del-row:hover { opacity: 1; background: #ef444420; }
+  .add-row-row td { padding: 4px; }
+  .add-row-btn { background: transparent; border: 1px dashed #2d3148; color: #64748b; width: 100%; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .add-row-btn:hover { border-color: #4f6ef7; color: #4f6ef7; }
+  .source-badge { font-size: 10px; background: #1e3a5f; color: #60a5fa; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .empty-state { text-align: center; padding: 60px; color: #4a5568; }
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; animation: slideup 0.3s ease; z-index: 100; }
+  .toast-success { background: #16a34a; color: white; }
+  .toast-error { background: #ef4444; color: white; }
+  @keyframes slideup { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .progress-bar { height: 3px; background: #4f6ef7; border-radius: 2px; transition: width 0.3s; }
+  .progress-wrap { background: #2d3148; border-radius: 2px; margin-bottom: 16px; overflow: hidden; display: none; }
+  .section-title { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .import-banner { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+  .import-banner-text { flex: 1; }
+  .import-banner-text strong { display: block; font-size: 14px; color: #e2e8f0; margin-bottom: 2px; }
+  .import-banner-text span { font-size: 12px; color: #64748b; }
+  .import-session-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .import-session-item { background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; }
+  .import-session-item-info { flex: 1; min-width: 0; }
+  .import-session-item-info strong { font-size: 13px; }
+  .import-session-item-info span { font-size: 11px; color: #64748b; display: block; margin-top: 1px; }
+  .import-session-item-actions { display: flex; gap: 6px; }
+  .btn-xs { padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; }
+  .btn-xs.blue { background: #4f6ef7; color: white; }
+  .btn-xs.red { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+  .pending-badge { font-size: 10px; background: #1e3a5f; color: #60a5fa; padding: 1px 7px; border-radius: 10px; white-space: nowrap; }
+  .pending-badge.done { background: #1a2e1a; color: #22c55e; }
+</style>
+</head>
+<body>
+<header>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/><circle cx="18" cy="5" r="0.5" fill="#4f6ef7"/><circle cx="18" cy="12" r="0.5" fill="#4f6ef7"/><circle cx="18" cy="19" r="0.5" fill="#4f6ef7"/></svg>
+  <h1>Rack Asset Scanner</h1>
+  <span>Claude Vision → Excel</span>
+</header>
+
+<div class="container">
+  <div class="api-bar">
+    <label>Anthropic API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+  </div>
+
+  <!-- Import session banner (hidden until JSON loaded) -->
+  <div id="importBanner" style="display:none">
+    <p class="section-title">Imported Sessions</p>
+    <div class="import-session-list" id="importSessionList"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <p class="section-title">Upload Photos</p>
+  <div class="upload-zone" id="dropzone">
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <p><strong>Drop rack photos here</strong> or click to select</p>
+    <p style="margin-top:4px;font-size:12px;">Supports JPG, PNG, HEIC, WebP — multiple files OK</p>
+  </div>
+
+  <div id="previews" class="previews"></div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="scanBtn" disabled>
+      <span id="scanIcon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      Scan with Claude
+    </button>
+    <button class="btn btn-success" id="exportBtn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export to Excel
+    </button>
+    <button class="btn btn-secondary" id="importBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Import Field Session
+    </button>
+    <input type="file" id="importInput" accept=".json" style="display:none">
+    <button class="btn btn-secondary" id="addRowBtn">+ Add Row</button>
+    <button class="btn btn-danger" id="clearBtn">Clear All</button>
+  </div>
+
+  <p class="section-title">Asset Inventory</p>
+  <div class="table-wrap" id="tableWrap">
+    <table id="assetTable">
+      <thead>
+        <tr>
+          <th style="width:90px">Rack #</th>
+          <th style="width:70px">Start U</th>
+          <th style="width:70px">End U</th>
+          <th style="width:130px">Category</th>
+          <th style="width:200px">Part Number</th>
+          <th style="width:220px">Serial Number</th>
+          <th style="width:160px">Notes</th>
+          <th style="width:80px">Source</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="add-row-row"><td colspan="9"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = ['Server', 'Network Switch', 'UPS', 'Storage', 'PDU', 'KVM', 'Other'];
+
+let rows = [];
+let images = []; // {file, dataUrl, status}
+let scanning = false;
+
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const previewsEl = document.getElementById('previews');
+const tableBody = document.getElementById('tableBody');
+const scanBtn = document.getElementById('scanBtn');
+const exportBtn = document.getElementById('exportBtn');
+const addRowBtn = document.getElementById('addRowBtn');
+const clearBtn = document.getElementById('clearBtn');
+const apiKeyEl = document.getElementById('apiKey');
+const progressWrap = document.getElementById('progressWrap');
+const progressBar = document.getElementById('progressBar');
+const scanIcon = document.getElementById('scanIcon');
+
+// Persist API key
+const savedKey = localStorage.getItem('rack_scanner_api_key');
+if (savedKey) apiKeyEl.value = savedKey;
+apiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_api_key', apiKeyEl.value));
+
+// Drag & drop
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+function handleFiles(files) {
+  [...files].forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      images.push({ file, dataUrl: e.target.result, status: 'ready' });
+      renderPreviews();
+      updateScanBtn();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPreviews() {
+  previewsEl.innerHTML = '';
+  images.forEach((img, i) => {
+    const name = img.label || img.file?.name || '';
+    const div = document.createElement('div');
+    div.className = 'preview-item';
+    div.innerHTML = `
+      <img src="${img.dataUrl}" alt="">
+      ${img.status === 'ready' && !img.label ? `<button onclick="removeImage(${i})">×</button>` : ''}
+      <div class="status ${img.status === 'processing' ? 'processing' : img.status === 'done' ? 'done' : img.status === 'error' ? 'error' : ''}">
+        ${img.status === 'ready' ? name : img.status === 'processing' ? '⏳ Scanning...' : img.status === 'done' ? '✓ Done' : '✗ Error'}
+      </div>
+    `;
+    previewsEl.appendChild(div);
+  });
+}
+
+function removeImage(i) {
+  images.splice(i, 1);
+  renderPreviews();
+  updateScanBtn();
+}
+
+function updateScanBtn() {
+  const hasImages = images.some(img => img.status === 'ready');
+  scanBtn.disabled = !hasImages || scanning;
+}
+
+// Table rendering
+function renderTable() {
+  const addRow = tableBody.querySelector('.add-row-row');
+  tableBody.innerHTML = '';
+  rows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${esc(row.rack)}" onchange="updateRow(${i},'rack',this.value)" placeholder="R01"></td>
+      <td><input type="number" value="${esc(row.startU)}" onchange="updateRow(${i},'startU',this.value)" placeholder="1" min="1" max="48"></td>
+      <td><input type="number" value="${esc(row.endU)}" onchange="updateRow(${i},'endU',this.value)" placeholder="2" min="1" max="48"></td>
+      <td>
+        <select onchange="updateRow(${i},'category',this.value)">
+          ${CATEGORIES.map(c => `<option ${row.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td><input value="${esc(row.partNumber)}" onchange="updateRow(${i},'partNumber',this.value)" placeholder="e.g. 867960-B21"></td>
+      <td><input value="${esc(row.serialNumber)}" onchange="updateRow(${i},'serialNumber',this.value)" placeholder="e.g. CZJ1234567" style="font-family:monospace"></td>
+      <td><input value="${esc(row.notes)}" onchange="updateRow(${i},'notes',this.value)" placeholder=""></td>
+      <td>${row.source ? `<span class="source-badge">${esc(row.source)}</span>` : ''}</td>
+      <td><button class="del-row" onclick="deleteRow(${i})">✕</button></td>
+    `;
+    tableBody.appendChild(tr);
+  });
+  const newAddRow = document.createElement('tr');
+  newAddRow.className = 'add-row-row';
+  newAddRow.innerHTML = '<td colspan="9"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
+  newAddRow.querySelector('button').addEventListener('click', addEmptyRow);
+  tableBody.appendChild(newAddRow);
+  exportBtn.disabled = rows.length === 0;
+}
+
+function esc(v) { return (v ?? '').toString().replace(/"/g, '&quot;'); }
+function updateRow(i, field, val) { rows[i][field] = val; }
+function deleteRow(i) { rows.splice(i, 1); renderTable(); }
+function addEmptyRow() {
+  rows.push({ rack: '', startU: '', endU: '', category: 'Server', partNumber: '', serialNumber: '', notes: '', source: '' });
+  renderTable();
+  // focus first cell of new row
+  const trs = tableBody.querySelectorAll('tr:not(.add-row-row)');
+  const last = trs[trs.length - 1];
+  if (last) last.querySelector('input')?.focus();
+}
+
+addRowBtn.addEventListener('click', addEmptyRow);
+document.getElementById('inlineAddBtn')?.addEventListener('click', addEmptyRow);
+
+// Scan
+scanBtn.addEventListener('click', async () => {
+  const apiKey = apiKeyEl.value.trim();
+  if (!apiKey) { toast('Enter your Anthropic API key first', 'error'); return; }
+
+  const toScan = images.filter(img => img.status === 'ready');
+  if (!toScan.length) return;
+
+  scanning = true;
+  scanBtn.disabled = true;
+  scanIcon.innerHTML = '<span class="spinner"></span>';
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  let done = 0;
+  for (const img of toScan) {
+    img.status = 'processing';
+    renderPreviews();
+    try {
+      const extracted = await callClaude(apiKey, img.dataUrl);
+      extracted.forEach(row => rows.push({ ...row, source: img.file.name.slice(0, 15) }));
+      img.status = 'done';
+    } catch (e) {
+      img.status = 'error';
+      console.error(e);
+      toast(`Error on ${img.file.name}: ${e.message}`, 'error');
+    }
+    done++;
+    progressBar.style.width = `${(done / toScan.length) * 100}%`;
+    renderPreviews();
+    renderTable();
+  }
+
+  scanning = false;
+  scanIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+  updateScanBtn();
+  progressWrap.style.display = 'none';
+  if (rows.length) toast(`Extracted ${rows.length} asset(s) total`, 'success');
+});
+
+async function callClaude(apiKey, dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const mimeType = dataUrl.split(';')[0].split(':')[1];
+
+  const prompt = `You are an expert at reading server rack labels, asset tags, and equipment identifiers.
+
+Examine this image carefully. Extract ALL visible server rack equipment entries.
+
+For each item you can identify, return a JSON object with these fields:
+- rack: rack identifier/number (e.g. "R01", "Rack 3", "A-02") — use "" if not visible
+- startU: starting rack unit number as integer (e.g. 1) — use null if not visible
+- endU: ending rack unit number as integer (e.g. 2, or same as startU for 1U) — use null if not visible
+- category: one of "Server", "Network Switch", "UPS", "Storage", "PDU", "KVM", "Other"
+- partNumber: manufacturer part/model number (e.g. "867960-B21", "N9K-C9396PX") — use "" if not visible
+- serialNumber: serial number from label (e.g. "CZJ1234567", "SGH123456") — use "" if not visible
+- notes: any other relevant label text (hostname, asset tag, location) — use "" if none
+
+Return ONLY a JSON array, no markdown, no explanation. If no equipment is identifiable, return [].
+
+Example output:
+[{"rack":"R01","startU":3,"endU":4,"category":"Server","partNumber":"867960-B21","serialNumber":"CZJ1234567","notes":"web-prod-01"},{"rack":"R01","startU":1,"endU":1,"category":"Network Switch","partNumber":"N9K-C9396PX","serialNumber":"FOC2134L12T","notes":""}]`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text ?? '[]';
+  // Strip any accidental markdown fences
+  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  return parsed.map(r => ({
+    rack: r.rack ?? '',
+    startU: r.startU != null ? String(r.startU) : '',
+    endU: r.endU != null ? String(r.endU) : '',
+    category: CATEGORIES.includes(r.category) ? r.category : 'Other',
+    partNumber: r.partNumber ?? '',
+    serialNumber: r.serialNumber ?? '',
+    notes: r.notes ?? '',
+    source: ''
+  }));
+}
+
+// Export
+exportBtn.addEventListener('click', () => {
+  if (!rows.length) return;
+  const wsData = [
+    ['Rack #', 'Start U', 'End U', 'Category', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
+    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.partNumber, r.serialNumber, r.notes, r.source])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [12, 8, 8, 16, 22, 22, 24, 20].map(w => ({ wch: w }));
+
+  // Header style (basic)
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+    if (cell) cell.s = { font: { bold: true }, fill: { fgColor: { rgb: 'C7D2FE' } } };
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Assets');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `rack-assets-${date}.xlsx`);
+  toast('Excel file downloaded', 'success');
+});
+
+// Clear
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Clear all images and data?')) return;
+  rows = [];
+  images = [];
+  renderPreviews();
+  renderTable();
+  updateScanBtn();
+});
+
+// ── Import Field Session ───────────────────────
+let importedSessions = []; // [{session, items:[{...itemRow, photos:[dataUrl], scanned}]}]
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importInput').click();
+});
+
+document.getElementById('importInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const session = JSON.parse(e.target.result);
+      if (!session.rackId || !Array.isArray(session.items)) throw new Error('Not a valid rack session file');
+      // Check for duplicate
+      const exists = importedSessions.find(s => s.session.rackId === session.rackId && s.session.createdAt === session.createdAt);
+      if (exists) { toast('Session already imported', 'error'); return; }
+      importedSessions.push({ session, scannedCount: 0 });
+      renderImportBanner();
+      toast(`Imported ${session.rackId} — ${session.items.length} item(s) ready to scan`);
+    } catch(err) {
+      toast('Invalid session file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  this.value = '';
+});
+
+function renderImportBanner() {
+  const banner = document.getElementById('importBanner');
+  const list = document.getElementById('importSessionList');
+  if (!importedSessions.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+
+  list.innerHTML = importedSessions.map((entry, si) => {
+    const s = entry.session;
+    const total = s.items.length;
+    const totalPhotos = s.items.reduce((n, item) => n + (item.photos?.length || 0), 0);
+    const scanned = entry.scannedCount || 0;
+    const allDone = scanned >= total;
+    return `
+    <div class="import-session-item">
+      <div style="font-size:24px">🗄️</div>
+      <div class="import-session-item-info">
+        <strong>${s.rackId}</strong>
+        <span>${s.notes || ''} · ${total} item${total!==1?'s':''} · ${totalPhotos} photo${totalPhotos!==1?'s':''}</span>
+      </div>
+      <span class="pending-badge ${allDone?'done':''}">${allDone ? '✓ Done' : scanned + '/' + total + ' scanned'}</span>
+      <div class="import-session-item-actions">
+        <button class="btn-xs blue" onclick="scanSession(${si})" ${allDone?'disabled':''}>
+          ${allDone ? 'Re-scan' : 'Scan'}
+        </button>
+        <button class="btn-xs red" onclick="removeImportedSession(${si})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removeImportedSession(si) {
+  importedSessions.splice(si, 1);
+  renderImportBanner();
+}
+
+async function scanSession(si) {
+  const apiKey = apiKeyEl.value.trim();
+  if (!apiKey) { toast('Enter your Anthropic API key first', 'error'); return; }
+
+  const entry = importedSessions[si];
+  const s = entry.session;
+  const items = s.items.filter(item => item.photos?.length > 0);
+  if (!items.length) { toast('No photos found in this session', 'error'); return; }
+
+  // Queue all item photos into the images array for display, tagged with metadata
+  const queuedImages = [];
+  items.forEach(item => {
+    item.photos.forEach((dataUrl, pi) => {
+      const label = `${s.rackId} U${item.startU}${item.startU!==item.endU?'-'+item.endU:''} #${pi+1}`;
+      queuedImages.push({
+        dataUrl,
+        label,
+        meta: { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), category: item.category, notes: item.notes || '' },
+        status: 'ready'
+      });
+    });
+  });
+
+  // Add to previews
+  queuedImages.forEach(qi => images.push(qi));
+  renderPreviews();
+
+  // Scan each image, but with metadata already known — Claude only reads labels
+  scanning = true;
+  scanBtn.disabled = true;
+  scanIcon.innerHTML = '<span class="spinner"></span>';
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  let done = 0;
+  entry.scannedCount = 0;
+
+  for (const qi of queuedImages) {
+    qi.status = 'processing';
+    renderPreviews();
+    try {
+      const extracted = await callClaudeWithMeta(apiKey, qi.dataUrl, qi.meta);
+      if (extracted !== null) rows.push(extracted);
+      qi.status = 'done';
+      entry.scannedCount++;
+    } catch(err) {
+      qi.status = 'error';
+      console.error(err);
+      toast(`Error: ${err.message}`, 'error');
+    }
+    done++;
+    progressBar.style.width = `${(done / queuedImages.length) * 100}%`;
+    renderPreviews();
+    renderTable();
+  }
+
+  scanning = false;
+  scanIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+  updateScanBtn();
+  progressWrap.style.display = 'none';
+  renderImportBanner();
+  toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
+}
+
+async function callClaudeWithMeta(apiKey, dataUrl, meta) {
+  // Rack/U/category already known — just extract part # and serial #
+  const base64 = dataUrl.split(',')[1];
+  const mimeType = dataUrl.split(';')[0].split(':')[1];
+
+  const prompt = `You are reading a photo of datacenter equipment.
+
+Context already known:
+- Rack: ${meta.rack}
+- U position: ${meta.startU}${meta.startU !== meta.endU ? '–' + meta.endU : ''}
+- Category: ${meta.category}
+${meta.notes ? `- Notes: ${meta.notes}` : ''}
+
+Your task: read the label(s) visible in this photo and extract:
+1. partNumber — the manufacturer part number or model number (e.g. "867960-B21", "N9K-C9396PX"). Use "" if not visible.
+2. serialNumber — the serial number (look for "S/N", "Serial", or a barcode label). Use "" if not visible.
+3. notes — any additional label text worth capturing (hostname sticker, asset tag, etc). Use "" if none.
+
+Return ONLY a JSON object (no markdown):
+{"partNumber":"...","serialNumber":"...","notes":"..."}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+        { type: 'text', text: prompt }
+      ]}]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text ?? '{}';
+  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+
+  // Merge context metadata with extracted label data
+  // If item has multiple photos, only the best result survives — deduplicate by U position
+  const existingIdx = rows.findIndex(r => r.rack === meta.rack && r.startU === meta.startU && r.endU === meta.endU);
+  if (existingIdx !== -1) {
+    // Update existing row with new data if better (non-empty wins)
+    const existing = rows[existingIdx];
+    if (!existing.partNumber && parsed.partNumber) existing.partNumber = parsed.partNumber;
+    if (!existing.serialNumber && parsed.serialNumber) existing.serialNumber = parsed.serialNumber;
+    if (parsed.notes && !existing.notes.includes(parsed.notes)) existing.notes = [existing.notes, parsed.notes].filter(Boolean).join('; ');
+    return null; // signal: row already updated in place
+  }
+
+  return {
+    rack: meta.rack,
+    startU: meta.startU,
+    endU: meta.endU,
+    category: meta.category,
+    partNumber: parsed.partNumber ?? '',
+    serialNumber: parsed.serialNumber ?? '',
+    notes: [meta.notes, parsed.notes].filter(Boolean).join('; '),
+    source: meta.rack
+  };
+}
+
+// Override renderTable to skip null rows (from multi-photo dedup)
+const _origRenderTable = renderTable;
+
+// Toast
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// Init
+renderTable();
+</script>
+</body>
+</html>
