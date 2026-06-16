@@ -157,6 +157,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .scanner-result { position: absolute; bottom: calc(40px + var(--safe-bottom)); left: 20px; right: 20px; background: var(--green); color: white; border-radius: 12px; padding: 14px 20px; text-align: center; font-weight: 600; font-size: 15px; font-family: monospace; display: none; }
 .scanner-result.show { display: block; }
 .scanner-status { position: absolute; bottom: calc(40px + var(--safe-bottom)); left: 20px; right: 20px; background: #00000088; border: 1px solid #ffffff22; color: #ffffffaa; border-radius: 12px; padding: 12px 20px; text-align: center; font-size: 13px; }
+.scanner-photo-btn { position: absolute; bottom: calc(110px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #1a1d2e; border: 1.5px solid var(--yellow); color: var(--yellow); border-radius: 12px; padding: 14px 24px; font-size: 15px; font-weight: 600; cursor: pointer; display: none; z-index: 1; white-space: nowrap; }
+.scanner-photo-btn.show { display: block; }
+.serial-photo-thumb { grid-column: 1 / -1; position: relative; aspect-ratio: unset; height: 80px; }
+.serial-photo-thumb img { border-radius: 8px; border: 2px solid var(--yellow); width: 100%; height: 100%; object-fit: cover; }
+.serial-photo-badge { position: absolute; bottom: 4px; left: 4px; background: #000000aa; color: var(--yellow); font-size: 10px; padding: 2px 7px; border-radius: 4px; pointer-events: none; }
 
 .toast { position: fixed; bottom: calc(80px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #1e2240; border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 13px; white-space: nowrap; z-index: 300; animation: toastIn 0.25s ease; pointer-events: none; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -316,7 +321,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
   <div class="scanner-result" id="scanner-result"></div>
   <div class="scanner-status" id="scanner-status">Starting camera…</div>
+  <button class="scanner-photo-btn" id="scanner-photo-btn">📷 Take Photo Instead</button>
 </div>
+<input type="file" accept="image/*" capture="environment" class="hidden-input" id="serial-photo-input">
 
 <script>
 // ── State ──────────────────────────────────────
@@ -326,6 +333,9 @@ let editingItemIdx = null;
 let rackPhotoContext = null;
 let viewerContext = null;
 let itemSheetPhotos = [];
+let itemSheetSerialPhoto = null;
+let endULinkedToStart = true;
+let scannerFallbackTimer = null;
 
 // ── LocalStorage ──────────────────────────────
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
@@ -439,10 +449,11 @@ function renderItemCard(item, i) {
           <button class="icon-btn" onclick="openItemSheet(${i})">✏️</button>
         </div>
       </div>
-      ${hasSerial || hasPart ? `
+      ${hasSerial || hasPart || item.serialPhoto ? `
       <div class="item-scanned-row">
         ${hasSerial ? `<span class="scanned-chip">S/N: ${item.serialNumber}</span>` : ''}
         ${hasPart   ? `<span class="scanned-chip part">P/N: ${item.partNumber}</span>` : ''}
+        ${!hasSerial && item.serialPhoto ? `<span class="scanned-chip" style="background:#2a2010;color:var(--yellow)">📷 S/N photo – OCR at desktop</span>` : ''}
       </div>` : ''}
       ${photoCount ? `
       <div class="item-thumbs">
@@ -506,26 +517,62 @@ function openItemSheet(itemIdx) {
   const item = itemIdx !== null ? s.items[itemIdx] : null;
 
   document.getElementById('item-sheet-title').textContent = item ? 'Edit Equipment' : 'Add Equipment';
-  document.getElementById('item-start-u').value = item?.startU ?? '';
-  document.getElementById('item-end-u').value   = item?.endU   ?? '';
   document.getElementById('item-category').value = item?.category ?? 'Server';
   document.getElementById('item-serial').value   = item?.serialNumber ?? '';
   document.getElementById('item-part').value     = item?.partNumber   ?? '';
   document.getElementById('item-notes').value    = item?.notes        ?? '';
   document.getElementById('delete-item-btn').style.display = item ? 'block' : 'none';
 
+  // Auto-populate U position for new items
+  if (item) {
+    document.getElementById('item-start-u').value = item.startU ?? '';
+    document.getElementById('item-end-u').value   = item.endU   ?? '';
+    endULinkedToStart = false;
+  } else {
+    const s = sessions[currentSessionIdx];
+    let nextU = '';
+    if (s.items.length > 0) {
+      const maxEnd = Math.max(...s.items.map(it => Number(it.endU) || Number(it.startU) || 0));
+      if (maxEnd > 0) nextU = maxEnd + 1;
+    }
+    document.getElementById('item-start-u').value = nextU;
+    document.getElementById('item-end-u').value   = nextU;
+    endULinkedToStart = true;
+  }
+
   const scanBtn = document.getElementById('scan-serial-btn');
   scanBtn.classList.toggle('scanned', !!(item?.serialNumber));
 
+  itemSheetSerialPhoto = item?.serialPhoto || null;
   itemSheetPhotos = [...(item?.photos || [])];
   renderItemPhotoGrid();
   openSheet('sheet-item');
 }
 
+// Keep End U in sync with Start U while user hasn't broken the link
+document.getElementById('item-start-u').addEventListener('input', function() {
+  if (endULinkedToStart) document.getElementById('item-end-u').value = this.value;
+});
+document.getElementById('item-end-u').addEventListener('input', function() {
+  const startVal = document.getElementById('item-start-u').value;
+  // User deliberately set end U different from start — stop auto-syncing
+  if (this.value !== startVal) endULinkedToStart = false;
+});
+
 function renderItemPhotoGrid() {
   const count = document.getElementById('item-photo-count');
-  count.textContent = itemSheetPhotos.length ? `(${itemSheetPhotos.length})` : '';
+  const total = itemSheetPhotos.length + (itemSheetSerialPhoto ? 1 : 0);
+  count.textContent = total ? `(${total})` : '';
+
+  const serialHtml = itemSheetSerialPhoto ? `
+    <div class="serial-photo-thumb">
+      <img src="${itemSheetSerialPhoto}" alt="">
+      <button class="del-photo" onclick="itemSheetSerialPhoto=null;renderItemPhotoGrid()">✕</button>
+      <div class="serial-photo-badge">📷 S/N photo</div>
+    </div>` : '';
+
   document.getElementById('item-photos-grid').innerHTML =
+    serialHtml +
     itemSheetPhotos.map((p, i) => `
       <div class="multi-photo-item">
         <img src="${p}" alt="">
@@ -556,6 +603,7 @@ document.getElementById('save-item-btn').addEventListener('click', () => {
     partNumber:   document.getElementById('item-part').value.trim(),
     notes:        document.getElementById('item-notes').value.trim(),
     photos:       [...itemSheetPhotos],
+    serialPhoto:  itemSheetSerialPhoto || null,
     addedAt:      Date.now()
   };
 
@@ -728,7 +776,14 @@ async function openScanner() {
   result.classList.remove('show');
   status.style.display = 'block';
   status.textContent = 'Starting camera…';
+  document.getElementById('scanner-photo-btn').classList.remove('show');
   overlay.classList.add('open');
+
+  // Show photo fallback after 3 seconds if no barcode found
+  clearTimeout(scannerFallbackTimer);
+  scannerFallbackTimer = setTimeout(() => {
+    document.getElementById('scanner-photo-btn').classList.add('show');
+  }, 3000);
 
   // Try native BarcodeDetector first (Chrome on Android — no library needed)
   if ('BarcodeDetector' in window) {
@@ -845,12 +900,42 @@ function onBarcodeDetected(value) {
 }
 
 function closeScanner() {
+  clearTimeout(scannerFallbackTimer);
   if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   if (window._zxingReader) { window._zxingReader.reset(); window._zxingReader = null; }
   document.getElementById('scanner-overlay').classList.remove('open');
   document.getElementById('scanner-result').classList.remove('show');
+  document.getElementById('scanner-photo-btn').classList.remove('show');
 }
+
+document.getElementById('scanner-photo-btn').addEventListener('click', () => {
+  closeScanner();
+  document.getElementById('serial-photo-input').click();
+});
+
+document.getElementById('serial-photo-input').addEventListener('change', function() {
+  const files = [...this.files];
+  this.value = '';
+  if (!files.length) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { const sc = MAX / Math.max(w, h); w = Math.round(w*sc); h = Math.round(h*sc); }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      itemSheetSerialPhoto = canvas.toDataURL('image/jpeg', 0.82);
+      renderItemPhotoGrid();
+      toast('📷 S/N photo saved — desktop will OCR it');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(files[0]);
+});
 
 // ── Toast ──────────────────────────────────────
 function toast(msg) {

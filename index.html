@@ -505,15 +505,15 @@ async function scanSession(si) {
   // Queue all item photos into the images array for display, tagged with metadata
   const queuedImages = [];
   items.forEach(item => {
+    const meta = { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), category: item.category, notes: item.notes || '' };
+    const uStr = item.startU !== item.endU ? `U${item.startU}-${item.endU}` : `U${item.startU}`;
     item.photos.forEach((dataUrl, pi) => {
-      const label = `${s.rackId} U${item.startU}${item.startU!==item.endU?'-'+item.endU:''} #${pi+1}`;
-      queuedImages.push({
-        dataUrl,
-        label,
-        meta: { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), category: item.category, notes: item.notes || '' },
-        status: 'ready'
-      });
+      queuedImages.push({ dataUrl, label: `${s.rackId} ${uStr} #${pi+1}`, meta, status: 'ready' });
     });
+    // Serial photo captured when barcode scanner couldn't read — OCR it if no serial yet
+    if (item.serialPhoto && !item.serialNumber) {
+      queuedImages.push({ dataUrl: item.serialPhoto, label: `${s.rackId} ${uStr} S/N photo`, meta, status: 'ready' });
+    }
   });
 
   // Add to previews
