@@ -18,21 +18,17 @@
 }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
 
-/* ── Screens ─────────────────────────────────── */
 .screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
 .screen.active { display: flex; }
 
-/* ── Top bar ─────────────────────────────────── */
 .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; padding-top: max(14px, env(safe-area-inset-top)); }
 .topbar-back { background: none; border: none; color: var(--sub); font-size: 22px; cursor: pointer; padding: 4px 8px 4px 0; line-height: 1; }
 .topbar h2 { font-size: 17px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-action { background: none; border: none; color: var(--blue); font-size: 15px; font-weight: 600; cursor: pointer; padding: 4px 0 4px 8px; white-space: nowrap; }
 
-/* ── Scroll body ─────────────────────────────── */
 .body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; padding-bottom: calc(90px + var(--safe-bottom)); }
 .body.no-pad-bottom { padding-bottom: 16px; }
 
-/* ── Home screen ─────────────────────────────── */
 .home-header { text-align: center; padding: 32px 0 24px; }
 .home-header svg { opacity: 0.7; margin-bottom: 12px; }
 .home-header h1 { font-size: 22px; font-weight: 700; }
@@ -45,41 +41,37 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .session-card-info h3 { font-size: 15px; font-weight: 600; }
 .session-card-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .session-card-chevron { color: var(--muted); font-size: 18px; }
-.session-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--surface2); color: var(--sub); }
-.session-badge.done { background: #1a2e1a; color: var(--green); }
-
 .empty-hint { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 14px; }
 
-/* ── FAB ─────────────────────────────────────── */
 .fab { position: fixed; bottom: calc(24px + var(--safe-bottom)); right: 20px; width: 58px; height: 58px; border-radius: 50%; background: var(--blue); border: none; color: white; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px #4f6ef740; z-index: 10; transition: transform 0.1s; }
 .fab:active { transform: scale(0.93); }
 
-/* ── Modal / sheet ───────────────────────────── */
 .sheet-overlay { position: fixed; inset: 0; background: #00000080; z-index: 50; display: none; align-items: flex-end; }
 .sheet-overlay.open { display: flex; }
-.sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; padding: 0 16px calc(24px + var(--safe-bottom)); max-height: 85vh; overflow-y: auto; }
+.sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; padding: 0 16px calc(24px + var(--safe-bottom)); max-height: 92vh; overflow-y: auto; }
 .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
 .sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 
-/* ── Form elements ───────────────────────────── */
 .field { margin-bottom: 16px; }
 .field label { display: block; font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
 .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 14px 14px; border-radius: 10px; font-size: 16px; font-family: inherit; appearance: none; -webkit-appearance: none; }
 .field input:focus, .field select:focus { outline: none; border-color: var(--blue); }
 .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Serial field with scan button */
+.field-with-btn { display: flex; gap: 8px; align-items: flex-end; }
+.field-with-btn .field { flex: 1; margin-bottom: 0; }
+.scan-btn { height: 52px; width: 52px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--blue); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; }
+.scan-btn:active { background: var(--blue); color: white; }
+.scan-btn.scanned { background: #1a2e1a; border-color: var(--green); color: var(--green); }
+
 .btn-full { width: 100%; padding: 16px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
 .btn-full:active { opacity: 0.8; }
 .btn-primary { background: var(--blue); color: white; }
 .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
 .btn-secondary { background: var(--surface2); color: var(--sub); }
-.btn-sm { padding: 9px 16px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
-.btn-sm:active { opacity: 0.8; }
-.btn-sm.blue { background: var(--blue); color: white; }
-.btn-sm.outline { background: transparent; color: var(--sub); border: 1px solid var(--border); }
-.btn-sm.red { background: transparent; color: var(--red); border: 1px solid var(--red); }
 
-/* ── Rack screen ─────────────────────────────── */
 .section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; margin-bottom: 8px; }
 
 .rack-photos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
@@ -100,10 +92,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .item-card-u { background: var(--surface2); color: var(--blue); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; font-family: monospace; }
 .item-card-info { flex: 1; min-width: 0; }
 .item-card-info h4 { font-size: 14px; font-weight: 600; }
-.item-card-info p { font-size: 12px; color: var(--muted); margin-top: 1px; }
-.item-card-actions { display: flex; gap: 6px; }
+.item-card-info p { font-size: 12px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; border-radius: 6px; }
 .icon-btn:active { background: var(--surface2); }
+
+.item-scanned-row { display: flex; gap: 6px; padding: 0 14px 10px; flex-wrap: wrap; }
+.scanned-chip { font-size: 11px; font-family: monospace; background: #1a2e1a; color: #86efac; padding: 3px 10px; border-radius: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scanned-chip.part { background: #1e2a1a; color: #a3e635; }
 
 .item-thumbs { display: flex; gap: 6px; padding: 0 14px 12px; flex-wrap: wrap; }
 .item-thumb { width: 60px; height: 45px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
@@ -113,7 +108,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .add-item-btn { width: 100%; padding: 14px; background: var(--surface); border: 1.5px dashed var(--border); border-radius: var(--radius); color: var(--sub); font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .add-item-btn:active { border-color: var(--blue); color: var(--blue); }
 
-/* ── Photo viewer ────────────────────────────── */
 .photo-viewer { position: fixed; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; }
 .photo-viewer.open { display: flex; }
 .photo-viewer-bar { display: flex; align-items: center; padding: 14px 16px; padding-top: max(14px, env(safe-area-inset-top)); background: #000000cc; position: absolute; top: 0; left: 0; right: 0; z-index: 1; }
@@ -122,7 +116,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .photo-viewer img { width: 100%; height: 100%; object-fit: contain; }
 .photo-viewer-del { position: absolute; bottom: calc(24px + var(--safe-bottom)); right: 20px; background: var(--red); border: none; color: white; border-radius: 10px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
-/* ── Multi-photo sheet ───────────────────────── */
 .multi-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .multi-photo-item { position: relative; aspect-ratio: 4/3; }
 .multi-photo-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
@@ -131,7 +124,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .add-photo-tile span { font-size: 24px; color: var(--muted); }
 .add-photo-tile p { font-size: 11px; color: var(--muted); }
 
-/* ── Export screen ───────────────────────────── */
 .export-info { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
 .export-info h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
 .export-info p { font-size: 13px; color: var(--muted); }
@@ -140,19 +132,39 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .stat h4 { font-size: 24px; font-weight: 700; color: var(--blue); }
 .stat p { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-/* Hidden file inputs */
 .hidden-input { display: none; }
 
-/* ── Toast ───────────────────────────────────── */
-.toast { position: fixed; bottom: calc(80px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #1e2240; border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 13px; white-space: nowrap; z-index: 200; animation: toastIn 0.25s ease; pointer-events: none; }
+/* ── Barcode Scanner Overlay ─────────────────── */
+.scanner-overlay { position: fixed; inset: 0; background: black; z-index: 200; display: none; flex-direction: column; }
+.scanner-overlay.open { display: flex; }
+.scanner-topbar { display: flex; align-items: center; padding: 14px 16px; padding-top: max(14px, env(safe-area-inset-top)); position: absolute; top: 0; left: 0; right: 0; z-index: 1; }
+.scanner-topbar h3 { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: white; }
+.scanner-topbar button { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+#scanner-video { width: 100%; height: 100%; object-fit: cover; }
+.scanner-ui { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.scanner-reticle { width: 260px; height: 160px; position: relative; }
+.scanner-reticle::before, .scanner-reticle::after,
+.scanner-reticle span::before, .scanner-reticle span::after {
+  content: ''; position: absolute; width: 28px; height: 28px; border-color: white; border-style: solid;
+}
+.scanner-reticle::before { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.scanner-reticle::after  { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.scanner-reticle span::before { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.scanner-reticle span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+.scanner-line { position: absolute; left: 4px; right: 4px; height: 2px; background: linear-gradient(to right, transparent, #4f6ef7, transparent); top: 50%; animation: scanline 2s ease-in-out infinite; }
+@keyframes scanline { 0%,100% { top: 10%; opacity: 0.8; } 50% { top: 90%; opacity: 1; } }
+.scanner-hint { color: #ffffffcc; font-size: 13px; margin-top: 20px; text-align: center; }
+.scanner-result { position: absolute; bottom: calc(40px + var(--safe-bottom)); left: 20px; right: 20px; background: var(--green); color: white; border-radius: 12px; padding: 14px 20px; text-align: center; font-weight: 600; font-size: 15px; font-family: monospace; display: none; }
+.scanner-result.show { display: block; }
+.scanner-status { position: absolute; bottom: calc(40px + var(--safe-bottom)); left: 20px; right: 20px; background: #00000088; border: 1px solid #ffffff22; color: #ffffffaa; border-radius: 12px; padding: 12px 20px; text-align: center; font-size: 13px; }
+
+.toast { position: fixed; bottom: calc(80px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #1e2240; border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 13px; white-space: nowrap; z-index: 300; animation: toastIn 0.25s ease; pointer-events: none; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN: HOME
-══════════════════════════════════════════════ -->
+<!-- SCREEN: HOME -->
 <div class="screen active" id="screen-home">
   <div class="body no-pad-bottom" style="padding-bottom: calc(90px + var(--safe-bottom));">
     <div class="home-header">
@@ -165,26 +177,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <div class="empty-hint">No sessions yet.<br>Tap + to start a new rack survey.</div>
     </div>
   </div>
-  <button class="fab" id="new-session-btn" title="New session">+</button>
+  <button class="fab" id="new-session-btn">+</button>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN: RACK
-══════════════════════════════════════════════ -->
+<!-- SCREEN: RACK -->
 <div class="screen" id="screen-rack">
   <div class="topbar">
     <button class="topbar-back" id="rack-back">‹</button>
     <h2 id="rack-title">Rack —</h2>
     <button class="topbar-action" id="rack-export-btn">Export</button>
   </div>
-  <div class="body" id="rack-body">
-    <!-- injected by JS -->
-  </div>
+  <div class="body" id="rack-body"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN: EXPORT PREVIEW
-══════════════════════════════════════════════ -->
+<!-- SCREEN: EXPORT -->
 <div class="screen" id="screen-export">
   <div class="topbar">
     <button class="topbar-back" id="export-back">‹</button>
@@ -193,9 +199,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <div class="body no-pad-bottom" id="export-body"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SHEET: NEW SESSION
-══════════════════════════════════════════════ -->
+<!-- SHEET: NEW SESSION -->
 <div class="sheet-overlay" id="sheet-new">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -213,13 +217,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SHEET: ADD / EDIT EQUIPMENT ITEM
-══════════════════════════════════════════════ -->
+<!-- SHEET: ADD / EDIT EQUIPMENT -->
 <div class="sheet-overlay" id="sheet-item">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <h3 id="item-sheet-title">Add Equipment</h3>
+
     <div class="field-row">
       <div class="field">
         <label>Start U</label>
@@ -230,6 +233,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <input id="item-end-u" type="number" min="1" max="48" placeholder="1" inputmode="numeric">
       </div>
     </div>
+
     <div class="field">
       <label>Category</label>
       <select id="item-category">
@@ -242,6 +246,25 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <option>Other</option>
       </select>
     </div>
+
+    <!-- Serial number with barcode scan button -->
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase">Serial Number</label>
+      <div class="field-with-btn">
+        <div class="field">
+          <input id="item-serial" type="text" placeholder="Scan barcode or type…" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-family:monospace">
+        </div>
+        <button class="scan-btn" id="scan-serial-btn" title="Scan barcode">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="13" y1="8" x2="13" y2="12"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="19" y1="8" x2="19" y2="12"/><line x1="13" y1="15" x2="19" y2="15"/><line x1="19" y1="15" x2="19" y2="16"/><line x1="13" y1="15" x2="13" y2="16"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Part Number (optional)</label>
+      <input id="item-part" type="text" placeholder="e.g. 867960-B21" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-family:monospace">
+    </div>
+
     <div class="field">
       <label>Notes (optional)</label>
       <input id="item-notes" type="text" placeholder="Hostname, asset tag…" autocomplete="off">
@@ -257,9 +280,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SHEET: RACK OVERVIEW PHOTOS
-══════════════════════════════════════════════ -->
+<!-- SHEET: RACK PHOTOS -->
 <div class="sheet-overlay" id="sheet-rack-photos">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -270,9 +291,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     PHOTO VIEWER
-══════════════════════════════════════════════ -->
+<!-- PHOTO VIEWER -->
 <div class="photo-viewer" id="photo-viewer">
   <div class="photo-viewer-bar">
     <button id="viewer-close">✕</button>
@@ -283,13 +302,35 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <button class="photo-viewer-del" id="viewer-del">Delete Photo</button>
 </div>
 
+<!-- BARCODE SCANNER OVERLAY -->
+<div class="scanner-overlay" id="scanner-overlay">
+  <div class="scanner-topbar">
+    <button id="scanner-close">✕</button>
+    <h3>Scan Barcode</h3>
+    <button style="opacity:0;pointer-events:none">✕</button>
+  </div>
+  <video id="scanner-video" playsinline muted></video>
+  <div class="scanner-ui">
+    <div class="scanner-reticle"><span></span><div class="scanner-line"></div></div>
+    <div class="scanner-hint">Point camera at the serial number barcode</div>
+  </div>
+  <div class="scanner-result" id="scanner-result"></div>
+  <div class="scanner-status" id="scanner-status">Starting camera…</div>
+</div>
+
 <script>
 // ── State ──────────────────────────────────────
 let sessions = load('rack_sessions') || [];
 let currentSessionIdx = null;
 let editingItemIdx = null;
-let rackPhotoContext = null; // 'front' | 'back'
-let viewerContext = null;    // {type:'rack'|'item', photoIdx, itemIdx?}
+let rackPhotoContext = null;
+let viewerContext = null;
+let itemSheetPhotos = [];
+
+// ── LocalStorage ──────────────────────────────
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
+function persist() { save('rack_sessions', sessions); }
 
 // ── Routing ────────────────────────────────────
 function showScreen(id) {
@@ -297,13 +338,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-// ── LocalStorage ──────────────────────────────
-function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
-function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
-
-function persist() { save('rack_sessions', sessions); }
-
-// ── Session / Home ─────────────────────────────
+// ── Home ───────────────────────────────────────
 function renderHome() {
   const list = document.getElementById('session-list');
   if (!sessions.length) {
@@ -312,14 +347,15 @@ function renderHome() {
   }
   list.innerHTML = sessions.map((s, i) => {
     const itemCount = s.items.length;
-    const photoCount = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,item)=>n+(item.photos?.length||0),0);
+    const scannedCount = s.items.filter(it => it.serialNumber).length;
+    const photoCount = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,it)=>n+(it.photos?.length||0),0);
     return `
     <div class="session-card" onclick="openSession(${i})">
       <div style="font-size:28px">🗄️</div>
       <div class="session-card-info">
         <h3>${s.rackId}</h3>
         <p>${s.notes||''} · ${itemCount} item${itemCount!==1?'s':''} · ${photoCount} photo${photoCount!==1?'s':''}</p>
-        <p style="color:var(--muted);font-size:11px;margin-top:2px">${new Date(s.createdAt).toLocaleString()}</p>
+        <p style="color:var(--muted);font-size:11px;margin-top:2px">${scannedCount > 0 ? `${scannedCount} barcode${scannedCount!==1?'s':''} scanned · ` : ''}${new Date(s.createdAt).toLocaleString()}</p>
       </div>
       <div class="session-card-chevron">›</div>
     </div>`;
@@ -336,8 +372,7 @@ document.getElementById('new-session-btn').addEventListener('click', () => {
 document.getElementById('create-session-btn').addEventListener('click', () => {
   const rackId = document.getElementById('new-rack-id').value.trim().toUpperCase();
   if (!rackId) { toast('Enter a rack ID'); return; }
-  const session = { rackId, notes: document.getElementById('new-rack-notes').value.trim(), createdAt: Date.now(), frontPhotos: [], backPhotos: [], items: [] };
-  sessions.push(session);
+  sessions.push({ rackId, notes: document.getElementById('new-rack-notes').value.trim(), createdAt: Date.now(), frontPhotos: [], backPhotos: [], items: [] });
   persist();
   closeSheet('sheet-new');
   openSession(sessions.length - 1);
@@ -355,12 +390,10 @@ function openSession(idx) {
 function renderRackScreen() {
   const s = sessions[currentSessionIdx];
   document.getElementById('rack-title').textContent = s.rackId;
-
-  const frontThumb = s.frontPhotos?.length ? `<img src="${s.frontPhotos[s.frontPhotos.length-1]}" alt="">` : '';
-  const backThumb = s.backPhotos?.length ? `<img src="${s.backPhotos[s.backPhotos.length-1]}" alt="">` : '';
-
   const frontCount = s.frontPhotos?.length||0;
   const backCount = s.backPhotos?.length||0;
+  const frontThumb = frontCount ? `<img src="${s.frontPhotos[frontCount-1]}" alt="">` : '';
+  const backThumb  = backCount  ? `<img src="${s.backPhotos[backCount-1]}" alt="">` : '';
 
   document.getElementById('rack-body').innerHTML = `
     <div class="section-label">Rack Photos</div>
@@ -374,20 +407,15 @@ function renderRackScreen() {
         ${backCount>1?`<div class="slot-count">${backCount}</div>`:''}
       </div>
     </div>
-
     <div class="divider"></div>
-
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span>Equipment Items</span>
       <span style="color:var(--sub);font-weight:400;text-transform:none;letter-spacing:0">${s.items.length} item${s.items.length!==1?'s':''}</span>
     </div>
-
     ${s.items.map((item, i) => renderItemCard(item, i)).join('')}
-
     <button class="add-item-btn" onclick="openItemSheet(null)">
       <span style="font-size:22px">+</span> Add Equipment Item
-    </button>
-  `;
+    </button>`;
 }
 
 function renderItemCard(item, i) {
@@ -396,6 +424,8 @@ function renderItemCard(item, i) {
   const thumbs = (item.photos||[]).map((p,pi) =>
     `<img class="item-thumb" src="${p}" onclick="openPhotoViewer('item',${i},${pi})" alt="">`
   ).join('');
+  const hasSerial = !!item.serialNumber;
+  const hasPart   = !!item.partNumber;
 
   return `
     <div class="item-card">
@@ -405,10 +435,15 @@ function renderItemCard(item, i) {
           <h4>${item.category}</h4>
           <p>${item.notes || (photoCount + ' photo' + (photoCount!==1?'s':''))}</p>
         </div>
-        <div class="item-card-actions">
-          <button class="icon-btn" onclick="openItemSheet(${i})" title="Edit">✏️</button>
+        <div>
+          <button class="icon-btn" onclick="openItemSheet(${i})">✏️</button>
         </div>
       </div>
+      ${hasSerial || hasPart ? `
+      <div class="item-scanned-row">
+        ${hasSerial ? `<span class="scanned-chip">S/N: ${item.serialNumber}</span>` : ''}
+        ${hasPart   ? `<span class="scanned-chip part">P/N: ${item.partNumber}</span>` : ''}
+      </div>` : ''}
       ${photoCount ? `
       <div class="item-thumbs">
         ${thumbs}
@@ -423,9 +458,7 @@ function renderItemCard(item, i) {
 }
 
 document.getElementById('rack-back').addEventListener('click', () => {
-  persist();
-  renderHome();
-  showScreen('screen-home');
+  persist(); renderHome(); showScreen('screen-home');
 });
 
 // ── Rack overview photos ───────────────────────
@@ -439,14 +472,13 @@ function openRackPhotos(side) {
 function renderRackPhotoSheet() {
   const s = sessions[currentSessionIdx];
   const photos = rackPhotoContext === 'front' ? s.frontPhotos : s.backPhotos;
-  const grid = document.getElementById('rack-photos-grid');
-  grid.innerHTML = (photos||[]).map((p, i) => `
-    <div class="multi-photo-item">
-      <img src="${p}" onclick="openPhotoViewer('rack',null,${i})" alt="">
-      <button class="del-photo" onclick="deleteRackPhoto(${i})">✕</button>
-    </div>
-  `).join('') + `
-    <div class="add-photo-tile" onclick="document.getElementById('rack-photo-input').click()">
+  document.getElementById('rack-photos-grid').innerHTML =
+    (photos||[]).map((p, i) => `
+      <div class="multi-photo-item">
+        <img src="${p}" onclick="openPhotoViewer('rack',null,${i})" alt="">
+        <button class="del-photo" onclick="deleteRackPhoto(${i})">✕</button>
+      </div>`).join('') +
+    `<div class="add-photo-tile" onclick="document.getElementById('rack-photo-input').click()">
       <span>📷</span><p>Add photo</p>
     </div>`;
 }
@@ -454,41 +486,36 @@ function renderRackPhotoSheet() {
 document.getElementById('rack-photo-input').addEventListener('change', function() {
   const s = sessions[currentSessionIdx];
   const arr = rackPhotoContext === 'front' ? s.frontPhotos : s.backPhotos;
-  readFiles([...this.files], arr, () => {
-    persist();
-    renderRackPhotoSheet();
-  });
+  readFiles([...this.files], arr, () => { persist(); renderRackPhotoSheet(); });
   this.value = '';
 });
 
 document.getElementById('close-rack-photo-sheet').addEventListener('click', () => {
-  closeSheet('sheet-rack-photos');
-  renderRackScreen();
+  closeSheet('sheet-rack-photos'); renderRackScreen();
 });
 
 function deleteRackPhoto(idx) {
-  const s = sessions[currentSessionIdx];
-  const arr = rackPhotoContext === 'front' ? s.frontPhotos : s.backPhotos;
-  arr.splice(idx, 1);
-  persist();
-  renderRackPhotoSheet();
+  const arr = rackPhotoContext === 'front' ? sessions[currentSessionIdx].frontPhotos : sessions[currentSessionIdx].backPhotos;
+  arr.splice(idx, 1); persist(); renderRackPhotoSheet();
 }
 
 // ── Item sheet ─────────────────────────────────
-let itemSheetPhotos = []; // working copy while sheet is open
-
 function openItemSheet(itemIdx) {
   editingItemIdx = itemIdx;
   const s = sessions[currentSessionIdx];
-  const isEdit = itemIdx !== null;
-  const item = isEdit ? s.items[itemIdx] : null;
+  const item = itemIdx !== null ? s.items[itemIdx] : null;
 
-  document.getElementById('item-sheet-title').textContent = isEdit ? 'Edit Equipment' : 'Add Equipment';
+  document.getElementById('item-sheet-title').textContent = item ? 'Edit Equipment' : 'Add Equipment';
   document.getElementById('item-start-u').value = item?.startU ?? '';
-  document.getElementById('item-end-u').value = item?.endU ?? '';
+  document.getElementById('item-end-u').value   = item?.endU   ?? '';
   document.getElementById('item-category').value = item?.category ?? 'Server';
-  document.getElementById('item-notes').value = item?.notes ?? '';
-  document.getElementById('delete-item-btn').style.display = isEdit ? 'block' : 'none';
+  document.getElementById('item-serial').value   = item?.serialNumber ?? '';
+  document.getElementById('item-part').value     = item?.partNumber   ?? '';
+  document.getElementById('item-notes').value    = item?.notes        ?? '';
+  document.getElementById('delete-item-btn').style.display = item ? 'block' : 'none';
+
+  const scanBtn = document.getElementById('scan-serial-btn');
+  scanBtn.classList.toggle('scanned', !!(item?.serialNumber));
 
   itemSheetPhotos = [...(item?.photos || [])];
   renderItemPhotoGrid();
@@ -496,24 +523,20 @@ function openItemSheet(itemIdx) {
 }
 
 function renderItemPhotoGrid() {
-  const grid = document.getElementById('item-photos-grid');
   const count = document.getElementById('item-photo-count');
   count.textContent = itemSheetPhotos.length ? `(${itemSheetPhotos.length})` : '';
-  grid.innerHTML = itemSheetPhotos.map((p, i) => `
-    <div class="multi-photo-item">
-      <img src="${p}" alt="">
-      <button class="del-photo" onclick="deleteItemSheetPhoto(${i})">✕</button>
-    </div>
-  `).join('') + `
-    <div class="add-photo-tile" onclick="document.getElementById('item-photo-input').click()">
+  document.getElementById('item-photos-grid').innerHTML =
+    itemSheetPhotos.map((p, i) => `
+      <div class="multi-photo-item">
+        <img src="${p}" alt="">
+        <button class="del-photo" onclick="deleteItemSheetPhoto(${i})">✕</button>
+      </div>`).join('') +
+    `<div class="add-photo-tile" onclick="document.getElementById('item-photo-input').click()">
       <span>📷</span><p>Add photo</p>
     </div>`;
 }
 
-function deleteItemSheetPhoto(idx) {
-  itemSheetPhotos.splice(idx, 1);
-  renderItemPhotoGrid();
-}
+function deleteItemSheetPhoto(idx) { itemSheetPhotos.splice(idx, 1); renderItemPhotoGrid(); }
 
 document.getElementById('item-photo-input').addEventListener('change', function() {
   readFiles([...this.files], itemSheetPhotos, () => renderItemPhotoGrid());
@@ -522,16 +545,18 @@ document.getElementById('item-photo-input').addEventListener('change', function(
 
 document.getElementById('save-item-btn').addEventListener('click', () => {
   const startU = parseInt(document.getElementById('item-start-u').value);
-  const endU = parseInt(document.getElementById('item-end-u').value) || startU;
+  const endU   = parseInt(document.getElementById('item-end-u').value) || startU;
   if (!startU) { toast('Enter a start U position'); return; }
 
   const s = sessions[currentSessionIdx];
   const item = {
     startU, endU: Math.max(startU, endU),
-    category: document.getElementById('item-category').value,
-    notes: document.getElementById('item-notes').value.trim(),
-    photos: [...itemSheetPhotos],
-    addedAt: Date.now()
+    category:     document.getElementById('item-category').value,
+    serialNumber: document.getElementById('item-serial').value.trim(),
+    partNumber:   document.getElementById('item-part').value.trim(),
+    notes:        document.getElementById('item-notes').value.trim(),
+    photos:       [...itemSheetPhotos],
+    addedAt:      Date.now()
   };
 
   if (editingItemIdx !== null) {
@@ -539,7 +564,7 @@ document.getElementById('save-item-btn').addEventListener('click', () => {
     s.items[editingItemIdx] = item;
   } else {
     s.items.push(item);
-    s.items.sort((a,b) => a.startU - b.startU);
+    s.items.sort((a, b) => a.startU - b.startU);
   }
   persist();
   closeSheet('sheet-item');
@@ -549,31 +574,23 @@ document.getElementById('save-item-btn').addEventListener('click', () => {
 document.getElementById('delete-item-btn').addEventListener('click', () => {
   if (!confirm('Delete this item?')) return;
   sessions[currentSessionIdx].items.splice(editingItemIdx, 1);
-  persist();
-  closeSheet('sheet-item');
-  renderRackScreen();
+  persist(); closeSheet('sheet-item'); renderRackScreen();
 });
 
 document.getElementById('cancel-item-btn').addEventListener('click', () => closeSheet('sheet-item'));
 
-// ── Add more photos to existing item ──────────
+// ── Add more photos inline ─────────────────────
 let addMorePhotoTarget = null;
 const addMoreInput = document.createElement('input');
-addMoreInput.type = 'file'; addMoreInput.accept = 'image/*'; addMoreInput.capture = 'environment'; addMoreInput.multiple = true;
+addMoreInput.type = 'file'; addMoreInput.accept = 'image/*';
+addMoreInput.capture = 'environment'; addMoreInput.multiple = true;
 addMoreInput.className = 'hidden-input';
 document.body.appendChild(addMoreInput);
 
-function addMorePhotos(itemIdx) {
-  addMorePhotoTarget = itemIdx;
-  addMoreInput.click();
-}
+function addMorePhotos(idx) { addMorePhotoTarget = idx; addMoreInput.click(); }
 addMoreInput.addEventListener('change', function() {
-  const s = sessions[currentSessionIdx];
-  const item = s.items[addMorePhotoTarget];
-  readFiles([...this.files], item.photos, () => {
-    persist();
-    renderRackScreen();
-  });
+  const item = sessions[currentSessionIdx].items[addMorePhotoTarget];
+  readFiles([...this.files], item.photos, () => { persist(); renderRackScreen(); });
   this.value = '';
 });
 
@@ -597,9 +614,8 @@ function openPhotoViewer(type, itemIdx, photoIdx) {
   document.getElementById('photo-viewer').classList.add('open');
 }
 
-document.getElementById('viewer-close').addEventListener('click', () => {
-  document.getElementById('photo-viewer').classList.remove('open');
-});
+document.getElementById('viewer-close').addEventListener('click', () =>
+  document.getElementById('photo-viewer').classList.remove('open'));
 
 document.getElementById('viewer-del').addEventListener('click', () => {
   if (!confirm('Delete this photo?')) return;
@@ -622,33 +638,32 @@ document.getElementById('export-back').addEventListener('click', () => showScree
 
 function showExport() {
   const s = sessions[currentSessionIdx];
-  const totalPhotos = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,item)=>n+(item.photos?.length||0),0);
-  const body = document.getElementById('export-body');
-  body.innerHTML = `
+  const totalPhotos = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,it)=>n+(it.photos?.length||0),0);
+  const scannedCount = s.items.filter(it => it.serialNumber).length;
+  document.getElementById('export-body').innerHTML = `
     <div class="export-info">
       <h3>${s.rackId}</h3>
       <p>${s.notes||'No location notes'} · ${new Date(s.createdAt).toLocaleString()}</p>
     </div>
     <div class="stat-row">
       <div class="stat"><h4>${s.items.length}</h4><p>Items</p></div>
+      <div class="stat"><h4>${scannedCount}</h4><p>Barcodes</p></div>
       <div class="stat"><h4>${totalPhotos}</h4><p>Photos</p></div>
-      <div class="stat"><h4>${(s.frontPhotos?.length?1:0)+(s.backPhotos?.length?1:0)}</h4><p>Rack views</p></div>
     </div>
     <div class="section-label" style="margin-bottom:10px">Items</div>
     ${s.items.map(item => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
-        <div style="background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;font-family:monospace">U${item.startU}${item.startU!==item.endU?'–'+item.endU:''}</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600">${item.category}</div>
-          <div style="font-size:12px;color:var(--muted)">${item.notes||''} · ${item.photos?.length||0} photo${(item.photos?.length||0)!==1?'s':''}</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${item.serialNumber||item.partNumber?'8px':'0'}">
+          <div style="background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;font-family:monospace">U${item.startU}${item.startU!==item.endU?'–'+item.endU:''}</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600">${item.category}</div><div style="font-size:12px;color:var(--muted)">${item.photos?.length||0} photo${(item.photos?.length||0)!==1?'s':''}</div></div>
         </div>
-      </div>
-    `).join('')}
-    <div style="height:20px"></div>
+        ${item.serialNumber ? `<div style="font-size:12px;font-family:monospace;color:#86efac">S/N: ${item.serialNumber}</div>` : ''}
+        ${item.partNumber   ? `<div style="font-size:12px;font-family:monospace;color:#a3e635">P/N: ${item.partNumber}</div>` : ''}
+      </div>`).join('')}
+    <div style="height:16px"></div>
     <button class="btn-full btn-primary" onclick="exportJSON()" style="margin-bottom:10px">Download Session JSON</button>
     <button class="btn-full btn-danger" onclick="deleteSession()" style="margin-bottom:20px">Delete Session</button>
-    <p style="font-size:12px;color:var(--muted);text-align:center">Open the JSON in the desktop Rack Asset Scanner to extract part & serial numbers with Claude Vision.</p>
-  `;
+    <p style="font-size:12px;color:var(--muted);text-align:center;padding-bottom:20px">Import this JSON in the desktop scanner. Items with barcodes scanned won't need Claude to read them.</p>`;
   showScreen('screen-export');
 }
 
@@ -658,26 +673,21 @@ function exportJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `rack-${s.rackId}-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  a.click(); URL.revokeObjectURL(url);
   toast('Downloaded!');
 }
 
 function deleteSession() {
-  if (!confirm(`Delete session "${sessions[currentSessionIdx].rackId}"? This cannot be undone.`)) return;
+  if (!confirm(`Delete session "${sessions[currentSessionIdx].rackId}"?`)) return;
   sessions.splice(currentSessionIdx, 1);
-  persist();
-  renderHome();
-  showScreen('screen-home');
+  persist(); renderHome(); showScreen('screen-home');
 }
 
 // ── Sheet helpers ──────────────────────────────
-function openSheet(id) { document.getElementById(id).classList.add('open'); }
+function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
-
-document.querySelectorAll('.sheet-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
-});
+document.querySelectorAll('.sheet-overlay').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); }));
 
 // ── File reader ────────────────────────────────
 function readFiles(files, arr, done) {
@@ -686,15 +696,11 @@ function readFiles(files, arr, done) {
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
-      // Resize to max 1600px to keep localStorage manageable
       const img = new Image();
       img.onload = () => {
         const MAX = 1600;
         let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          const scale = MAX / Math.max(w, h);
-          w = Math.round(w * scale); h = Math.round(h * scale);
-        }
+        if (w > MAX || h > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -705,6 +711,145 @@ function readFiles(files, arr, done) {
     };
     reader.readAsDataURL(file);
   });
+}
+
+// ── Barcode Scanner ────────────────────────────
+let scannerStream = null;
+let scannerAnimFrame = null;
+let barcodeDetector = null;
+
+document.getElementById('scan-serial-btn').addEventListener('click', openScanner);
+document.getElementById('scanner-close').addEventListener('click', closeScanner);
+
+async function openScanner() {
+  const overlay = document.getElementById('scanner-overlay');
+  const status  = document.getElementById('scanner-status');
+  const result  = document.getElementById('scanner-result');
+  result.classList.remove('show');
+  status.style.display = 'block';
+  status.textContent = 'Starting camera…';
+  overlay.classList.add('open');
+
+  // Try native BarcodeDetector first (Chrome on Android — no library needed)
+  if ('BarcodeDetector' in window) {
+    try {
+      barcodeDetector = new BarcodeDetector({
+        formats: ['code_128', 'code_39', 'qr_code', 'data_matrix', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec']
+      });
+    } catch(e) {
+      barcodeDetector = new BarcodeDetector();
+    }
+    await startCameraStream();
+    status.textContent = 'Scanning…';
+    scanLoop();
+    return;
+  }
+
+  // Fall back to ZXing (load on-demand)
+  status.textContent = 'Loading scanner library…';
+  if (!window.ZXing) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
+    script.onload = () => startZXing();
+    script.onerror = () => { status.textContent = 'Failed to load scanner. Type serial manually.'; };
+    document.head.appendChild(script);
+  } else {
+    startZXing();
+  }
+}
+
+async function startCameraStream() {
+  const video = document.getElementById('scanner-video');
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+  } catch(e) {
+    document.getElementById('scanner-status').textContent = 'Camera access denied. Check browser permissions.';
+    throw e;
+  }
+}
+
+async function scanLoop() {
+  const video = document.getElementById('scanner-video');
+  const status = document.getElementById('scanner-status');
+  if (!scannerStream || !barcodeDetector) return;
+
+  try {
+    const barcodes = await barcodeDetector.detect(video);
+    if (barcodes.length > 0) {
+      const value = barcodes[0].rawValue;
+      onBarcodeDetected(value);
+      return;
+    }
+  } catch(e) {}
+
+  status.textContent = 'Scanning…';
+  scannerAnimFrame = requestAnimationFrame(scanLoop);
+}
+
+function startZXing() {
+  const status = document.getElementById('scanner-status');
+  const video  = document.getElementById('scanner-video');
+  status.textContent = 'Starting camera…';
+
+  const reader = new ZXing.BrowserMultiFormatReader();
+  window._zxingReader = reader;
+
+  reader.decodeFromConstraints(
+    { video: { facingMode: 'environment' } },
+    video,
+    (result, err) => {
+      if (result) {
+        onBarcodeDetected(result.getText());
+        reader.reset();
+      } else if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.warn('ZXing:', err);
+      }
+    }
+  ).then(() => {
+    scannerStream = video.srcObject;
+    status.textContent = 'Scanning…';
+  }).catch(e => {
+    status.textContent = 'Camera access denied. Check browser permissions.';
+  });
+}
+
+function onBarcodeDetected(value) {
+  // Stop camera
+  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  if (window._zxingReader) { window._zxingReader.reset(); window._zxingReader = null; }
+
+  // Show result briefly
+  const result = document.getElementById('scanner-result');
+  const status = document.getElementById('scanner-status');
+  result.textContent = value;
+  result.classList.add('show');
+  status.style.display = 'none';
+
+  // Haptic feedback if available
+  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+
+  setTimeout(() => {
+    document.getElementById('scanner-overlay').classList.remove('open');
+    result.classList.remove('show');
+    // Fill the serial number field
+    const input = document.getElementById('item-serial');
+    input.value = value;
+    document.getElementById('scan-serial-btn').classList.add('scanned');
+    toast('Barcode scanned ✓');
+  }, 900);
+}
+
+function closeScanner() {
+  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  if (window._zxingReader) { window._zxingReader.reset(); window._zxingReader = null; }
+  document.getElementById('scanner-overlay').classList.remove('open');
+  document.getElementById('scanner-result').classList.remove('show');
 }
 
 // ── Toast ──────────────────────────────────────
