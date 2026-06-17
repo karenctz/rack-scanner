@@ -171,13 +171,14 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 <!-- SCREEN: HOME -->
 <div class="screen active" id="screen-home">
-  <div class="body no-pad-bottom" style="padding-bottom: calc(90px + var(--safe-bottom));">
-    <div class="home-header">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="1.5"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/><circle cx="18" cy="5" r="0.7" fill="#4f6ef7"/><circle cx="18" cy="12" r="0.7" fill="#4f6ef7"/><circle cx="18" cy="19" r="0.7" fill="#4f6ef7"/></svg>
-      <h1>Rack Field Capture</h1>
-      <p>Photograph and tag datacenter equipment</p>
+  <div class="topbar">
+    <div style="flex:1">
+      <div style="font-size:17px;font-weight:700">Rack Field Capture</div>
     </div>
-    <div class="section-label">Racks</div>
+    <button class="topbar-action" id="export-all-btn" style="display:none">Export All</button>
+  </div>
+  <div class="body no-pad-bottom" style="padding-bottom: calc(90px + var(--safe-bottom));">
+    <div class="section-label" style="margin-top:4px">Racks</div>
     <div class="session-list" id="session-list">
       <div class="empty-hint">No racks yet.<br>Tap + to start a new rack survey.</div>
     </div>
@@ -355,6 +356,7 @@ function renderHome() {
     list.innerHTML = '<div class="empty-hint">No sessions yet.<br>Tap + to start a new rack survey.</div>';
     return;
   }
+  document.getElementById('export-all-btn').style.display = sessions.length ? 'block' : 'none';
   list.innerHTML = sessions.map((s, i) => {
     const itemCount = s.items.length;
     const scannedCount = s.items.filter(it => it.serialNumber).length;
@@ -724,6 +726,18 @@ function exportJSON() {
   a.click(); URL.revokeObjectURL(url);
   toast('Downloaded!');
 }
+
+function exportAllJSON() {
+  if (!sessions.length) return;
+  const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `all-racks-${Date.now()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast(`Exported ${sessions.length} rack${sessions.length !== 1 ? 's' : ''}`);
+}
+
+document.getElementById('export-all-btn').addEventListener('click', exportAllJSON);
 
 function deleteSession() {
   if (!confirm(`Delete rack "${sessions[currentSessionIdx].rackId}"?`)) return;

@@ -652,16 +652,23 @@ document.getElementById('importInput').addEventListener('change', function() {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const session = JSON.parse(e.target.result);
-      if (!session.rackId || !Array.isArray(session.items)) throw new Error('Not a valid rack session file');
-      // Check for duplicate
-      const exists = importedSessions.find(s => s.session.rackId === session.rackId && s.session.createdAt === session.createdAt);
-      if (exists) { toast('Session already imported', 'error'); return; }
-      importedSessions.push({ session, scannedCount: 0 });
+      const parsed = JSON.parse(e.target.result);
+      // Accept a single rack object or an array of racks (Export All format)
+      const rack_list = Array.isArray(parsed) ? parsed : [parsed];
+      if (!rack_list.length) throw new Error('File contains no racks');
+      let added = 0, skipped = 0;
+      rack_list.forEach(session => {
+        if (!session.rackId || !Array.isArray(session.items)) { skipped++; return; }
+        const exists = importedSessions.find(s => s.session.rackId === session.rackId && s.session.createdAt === session.createdAt);
+        if (exists) { skipped++; return; }
+        importedSessions.push({ session, scannedCount: 0 });
+        added++;
+      });
       renderImportBanner();
-      toast(`Imported ${session.rackId} — ${session.items.length} item(s) ready to scan`);
+      if (added) toast(`Imported ${added} rack${added !== 1 ? 's' : ''}${skipped ? `, ${skipped} skipped (duplicate)` : ''}`);
+      else toast('All racks already imported', 'error');
     } catch(err) {
-      toast('Invalid session file: ' + err.message, 'error');
+      toast('Invalid file: ' + err.message, 'error');
     }
   };
   reader.readAsText(file);
