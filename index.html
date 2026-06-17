@@ -714,31 +714,11 @@ function renderImportBanner() {
   }).join('');
 }
 
-async function scanAll() {
-  const flowUrl = apiKeyEl.value.trim();
-  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
-  const pending = importedSessions.map((e, i) => i).filter(i => (importedSessions[i].scannedCount || 0) < importedSessions[i].session.items.length);
-  if (!pending.length) { toast('All racks already scanned', 'error'); return; }
-  for (const si of pending) {
-    await scanSession(si);
-  }
-}
-
-function removeImportedSession(si) {
-  importedSessions.splice(si, 1);
-  renderImportBanner();
-}
-
-async function scanSession(si) {
-  const apiKey = apiKeyEl.value.trim();
-  if (!apiKey) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
-
+// Build the queued-image list for one session (does NOT add to images[])
+function buildSessionQueue(si) {
   const entry = importedSessions[si];
   const s = entry.session;
   const items = s.items.filter(item => item.photos?.length > 0);
-  if (!items.length) { toast('No photos found in this session', 'error'); return; }
-
-  // Queue all item photos into the images array for display, tagged with metadata
   const queuedImages = [];
   items.forEach(item => {
     const meta = { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), category: item.category, notes: item.notes || '' };
@@ -746,32 +726,29 @@ async function scanSession(si) {
     item.photos.forEach((dataUrl, pi) => {
       queuedImages.push({ dataUrl, label: `${s.rackId} ${uStr} #${pi+1}`, meta, status: 'ready' });
     });
-    // Serial photo captured when barcode scanner couldn't read — OCR it if no serial yet
     if (item.serialPhoto && !item.serialNumber) {
       queuedImages.push({ dataUrl: item.serialPhoto, label: `${s.rackId} ${uStr} S/N photo`, meta, status: 'ready' });
     }
   });
+  return queuedImages;
+}
 
-  // Add to previews
-  queuedImages.forEach(qi => images.push(qi));
-  renderPreviews();
-
-  // Scan each image, but with metadata already known — Claude only reads labels
-  scanning = true;
-  scanBtn.disabled = true;
-  scanIcon.innerHTML = '<span class="spinner"></span>';
-  progressWrap.style.display = 'block';
-  progressBar.style.width = '0%';
-
-  let done = 0;
+// Scan a pre-built queue for one session; images must already be in images[]
+async function processSessionQueue(si, queuedImages, allQueues) {
+  const flowUrl = apiKeyEl.value.trim();
+  const entry = importedSessions[si];
+  const s = entry.session;
   entry.scannedCount = 0;
   const errors = [];
+  const totalAll = allQueues.reduce((n, q) => n + q.length, 0);
+  const doneBeforeThis = allQueues.slice(0, allQueues.indexOf(queuedImages)).reduce((n, q) => n + q.length, 0);
+  let done = 0;
 
   for (const qi of queuedImages) {
     qi.status = 'processing';
     renderPreviews();
     try {
-      const extracted = await callAIBuilderWithMeta(apiKey, qi.dataUrl, qi.meta);
+      const extracted = await callAIBuilderWithMeta(flowUrl, qi.dataUrl, qi.meta);
       if (extracted !== null) rows.push(extracted);
       qi.status = 'done';
       entry.scannedCount++;
@@ -782,22 +759,72 @@ async function scanSession(si) {
       logError(qi.label, err.message);
     }
     done++;
-    progressBar.style.width = `${(done / queuedImages.length) * 100}%`;
+    progressBar.style.width = `${((doneBeforeThis + done) / totalAll) * 100}%`;
     renderPreviews();
     renderTable();
+  }
+
+  renderImportBanner();
+  if (entry.scannedCount > 0) toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
+  errors.forEach(e => toast(`${e.label}: ${e.message}`, 'error'));
+}
+
+async function scanAll() {
+  const flowUrl = apiKeyEl.value.trim();
+  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
+  const pendingIdxs = importedSessions.map((e, i) => i).filter(i => (importedSessions[i].scannedCount || 0) < importedSessions[i].session.items.length);
+  if (!pendingIdxs.length) { toast('All racks already scanned', 'error'); return; }
+
+  // Build all queues first, push all photos into images[] at once so they're all visible
+  const allQueues = pendingIdxs.map(si => buildSessionQueue(si));
+  allQueues.forEach(q => q.forEach(qi => images.push(qi)));
+  renderPreviews(); // show every photo upfront
+
+  scanning = true;
+  scanBtn.disabled = true;
+  scanIcon.innerHTML = '<span class="spinner"></span>';
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  for (let i = 0; i < pendingIdxs.length; i++) {
+    await processSessionQueue(pendingIdxs[i], allQueues[i], allQueues);
   }
 
   scanning = false;
   scanIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
   updateScanBtn();
   progressWrap.style.display = 'none';
-  renderImportBanner();
+}
 
-  if (entry.scannedCount > 0) {
-    toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
-  }
-  // Show errors after success so they appear on top and stay for 8 s
-  errors.forEach(e => toast(`${e.label}: ${e.message}`, 'error'));
+async function scanSession(si) {
+  const flowUrl = apiKeyEl.value.trim();
+  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
+
+  const entry = importedSessions[si];
+  const s = entry.session;
+  const queuedImages = buildSessionQueue(si);
+  if (!queuedImages.length) { toast('No photos found in this session', 'error'); return; }
+
+  queuedImages.forEach(qi => images.push(qi));
+  renderPreviews();
+
+  scanning = true;
+  scanBtn.disabled = true;
+  scanIcon.innerHTML = '<span class="spinner"></span>';
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  await processSessionQueue(si, queuedImages, [queuedImages]);
+
+  scanning = false;
+  scanIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+  updateScanBtn();
+  progressWrap.style.display = 'none';
+}
+
+function removeImportedSession(si) {
+  importedSessions.splice(si, 1);
+  renderImportBanner();
 }
 
 async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
