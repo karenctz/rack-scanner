@@ -751,28 +751,48 @@ function closeSheet(id) { document.getElementById(id).classList.remove('open'); 
 document.querySelectorAll('.sheet-overlay').forEach(el =>
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); }));
 
-// ── File reader ────────────────────────────────
-function readFiles(files, arr, done) {
-  let pending = files.length;
-  if (!pending) { done(); return; }
-  files.forEach(file => {
+// ── File reader (EXIF-orientation aware) ───────
+const MAX_PX = 1600;
+
+async function resizeFileToDataUrl(file) {
+  // createImageBitmap with imageOrientation corrects EXIF rotation (portrait/landscape)
+  // Supported: Chrome 64+, Firefox 93+, Safari 15.4+
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      let w = bmp.width, h = bmp.height;
+      if (w > MAX_PX || h > MAX_PX) { const s = MAX_PX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      return canvas.toDataURL('image/jpeg', 0.82);
+    } catch(_) { /* fall through to FileReader */ }
+  }
+  // Fallback: FileReader (no EXIF correction, but works everywhere)
+  return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1600;
         let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
+        if (w > MAX_PX || h > MAX_PX) { const s = MAX_PX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        arr.push(canvas.toDataURL('image/jpeg', 0.82));
-        if (--pending === 0) done();
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   });
+}
+
+function readFiles(files, arr, done) {
+  if (!files.length) { done(); return; }
+  Promise.all(files.map(f => resizeFileToDataUrl(f)))
+    .then(dataUrls => { dataUrls.forEach(d => arr.push(d)); done(); })
+    .catch(() => done());
 }
 
 // ── Barcode Scanner ────────────────────────────
