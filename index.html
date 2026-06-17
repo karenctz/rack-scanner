@@ -62,7 +62,8 @@
   .add-row-btn:hover { border-color: #4f6ef7; color: #4f6ef7; }
   .source-badge { font-size: 10px; background: #1e3a5f; color: #60a5fa; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
   .empty-state { text-align: center; padding: 60px; color: #4a5568; }
-  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; animation: slideup 0.3s ease; z-index: 100; }
+  #toast-stack { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; z-index: 100; pointer-events: none; }
+  .toast { padding: 12px 20px; border-radius: 8px; font-size: 13px; animation: slideup 0.3s ease; max-width: 380px; word-break: break-word; }
   .toast-success { background: #16a34a; color: white; }
   .toast-error { background: #ef4444; color: white; }
   @keyframes slideup { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -529,6 +530,7 @@ async function scanSession(si) {
 
   let done = 0;
   entry.scannedCount = 0;
+  const errors = [];
 
   for (const qi of queuedImages) {
     qi.status = 'processing';
@@ -541,7 +543,7 @@ async function scanSession(si) {
     } catch(err) {
       qi.status = 'error';
       console.error(err);
-      toast(`Error: ${err.message}`, 'error');
+      errors.push({ label: qi.label, message: err.message });
     }
     done++;
     progressBar.style.width = `${(done / queuedImages.length) * 100}%`;
@@ -554,7 +556,12 @@ async function scanSession(si) {
   updateScanBtn();
   progressWrap.style.display = 'none';
   renderImportBanner();
-  toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
+
+  if (entry.scannedCount > 0) {
+    toast(`Scanned ${entry.scannedCount} item(s) from ${s.rackId}`, 'success');
+  }
+  // Show errors after success so they appear on top and stay for 8 s
+  errors.forEach(e => toast(`${e.label}: ${e.message}`, 'error'));
 }
 
 async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
@@ -591,15 +598,18 @@ const _origRenderTable = renderTable;
 
 // Toast
 function toast(msg, type = 'success') {
+  const stack = document.getElementById('toast-stack');
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
   el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  stack.appendChild(el);
+  const ttl = type === 'error' ? 8000 : 3500;
+  setTimeout(() => el.remove(), ttl);
 }
 
 // Init
 renderTable();
 </script>
+<div id="toast-stack"></div>
 </body>
 </html>
