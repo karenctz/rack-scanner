@@ -400,11 +400,12 @@ scanBtn.addEventListener('click', async () => {
 // Flow must respond with { text: "...raw ocr text..." }
 
 async function callFlow(flowUrl, base64, mimeType) {
-  const body = JSON.stringify({ image: base64, mimeType });
+  // Send raw base64 string as plain text — no JSON wrapping.
+  // Flow reads triggerBody() directly as the base64 image, no Parse JSON step needed.
   const res = await fetch(flowUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body
+    body: base64
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const data = await res.json();
