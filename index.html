@@ -115,7 +115,13 @@
 
   <!-- Import session banner (hidden until JSON loaded) -->
   <div id="importBanner" style="display:none">
-    <p class="section-title">Imported Sessions</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <p class="section-title" style="margin-bottom:0">Imported Sessions</p>
+      <button class="btn btn-primary" id="scanAllBtn" style="display:none;padding:6px 14px;font-size:12px" onclick="scanAll()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Scan All
+      </button>
+    </div>
     <div class="import-session-list" id="importSessionList"></div>
     <div style="height:20px"></div>
   </div>
@@ -680,6 +686,9 @@ function renderImportBanner() {
   const list = document.getElementById('importSessionList');
   if (!importedSessions.length) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
+  const pending = importedSessions.filter(e => (e.scannedCount || 0) < e.session.items.length);
+  const scanAllBtn = document.getElementById('scanAllBtn');
+  scanAllBtn.style.display = importedSessions.length > 1 && pending.length > 0 ? 'flex' : 'none';
 
   list.innerHTML = importedSessions.map((entry, si) => {
     const s = entry.session;
@@ -703,6 +712,16 @@ function renderImportBanner() {
       </div>
     </div>`;
   }).join('');
+}
+
+async function scanAll() {
+  const flowUrl = apiKeyEl.value.trim();
+  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
+  const pending = importedSessions.map((e, i) => i).filter(i => (importedSessions[i].scannedCount || 0) < importedSessions[i].session.items.length);
+  if (!pending.length) { toast('All racks already scanned', 'error'); return; }
+  for (const si of pending) {
+    await scanSession(si);
+  }
 }
 
 function removeImportedSession(si) {
