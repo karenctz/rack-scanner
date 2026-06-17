@@ -277,7 +277,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
     <div class="section-label" style="margin-bottom:10px">Photos <span id="item-photo-count" style="color:var(--sub);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="multi-photos" id="item-photos-grid"></div>
-    <input type="file" accept="image/*" capture="environment" class="hidden-input" id="item-photo-input" multiple>
+    <input type="file" accept="image/*" class="hidden-input" id="item-photo-input" multiple>
 
     <button class="btn-full btn-primary" id="save-item-btn" style="margin-top:8px">Save</button>
     <button class="btn-full btn-danger" id="delete-item-btn" style="margin-top:10px;display:none">Delete Item</button>
@@ -291,7 +291,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div class="sheet-handle"></div>
     <h3 id="rack-photo-sheet-title">Rack Photos</h3>
     <div class="multi-photos" id="rack-photos-grid"></div>
-    <input type="file" accept="image/*" capture="environment" class="hidden-input" id="rack-photo-input" multiple>
+    <input type="file" accept="image/*" class="hidden-input" id="rack-photo-input" multiple>
     <button class="btn-full btn-secondary" id="close-rack-photo-sheet">Done</button>
   </div>
 </div>
@@ -323,7 +323,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <div class="scanner-status" id="scanner-status">Starting camera…</div>
   <button class="scanner-photo-btn" id="scanner-photo-btn">📷 Take Photo Instead</button>
 </div>
-<input type="file" accept="image/*" capture="environment" class="hidden-input" id="serial-photo-input">
+<input type="file" accept="image/*" class="hidden-input" id="serial-photo-input">
 
 <script>
 // ── State ──────────────────────────────────────
@@ -631,7 +631,7 @@ document.getElementById('cancel-item-btn').addEventListener('click', () => close
 let addMorePhotoTarget = null;
 const addMoreInput = document.createElement('input');
 addMoreInput.type = 'file'; addMoreInput.accept = 'image/*';
-addMoreInput.capture = 'environment'; addMoreInput.multiple = true;
+addMoreInput.multiple = true;
 addMoreInput.className = 'hidden-input';
 document.body.appendChild(addMoreInput);
 
