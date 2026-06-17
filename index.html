@@ -181,6 +181,7 @@
           <th style="width:70px">Start U</th>
           <th style="width:70px">End U</th>
           <th style="width:130px">Category</th>
+          <th style="width:160px">Manufacturer</th>
           <th style="width:200px">Part Number</th>
           <th style="width:220px">Serial Number</th>
           <th style="width:160px">Notes</th>
@@ -328,6 +329,7 @@ function renderTable() {
           ${CATEGORIES.map(c => `<option ${row.category===c?'selected':''}>${c}</option>`).join('')}
         </select>
       </td>
+      <td><input value="${esc(row.manufacturer)}" onchange="updateRow(${i},'manufacturer',this.value)" placeholder="e.g. HPE"></td>
       <td><input value="${esc(row.partNumber)}" onchange="updateRow(${i},'partNumber',this.value)" placeholder="e.g. 867960-B21"></td>
       <td><input value="${esc(row.serialNumber)}" onchange="updateRow(${i},'serialNumber',this.value)" placeholder="e.g. CZJ1234567" style="font-family:monospace"></td>
       <td><input value="${esc(row.notes)}" onchange="updateRow(${i},'notes',this.value)" placeholder=""></td>
@@ -338,7 +340,7 @@ function renderTable() {
   });
   const newAddRow = document.createElement('tr');
   newAddRow.className = 'add-row-row';
-  newAddRow.innerHTML = '<td colspan="9"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
+  newAddRow.innerHTML = '<td colspan="10"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
   newAddRow.querySelector('button').addEventListener('click', addEmptyRow);
   tableBody.appendChild(newAddRow);
   exportBtn.disabled = rows.length === 0;
@@ -349,7 +351,7 @@ function esc(v) { return (v ?? '').toString().replace(/"/g, '&quot;'); }
 function updateRow(i, field, val) { rows[i][field] = val; }
 function deleteRow(i) { rows.splice(i, 1); renderTable(); }
 function addEmptyRow() {
-  rows.push({ rack: '', startU: '', endU: '', category: 'Server', partNumber: '', serialNumber: '', notes: '', source: '' });
+  rows.push({ rack: '', startU: '', endU: '', category: 'Server', manufacturer: '', partNumber: '', serialNumber: '', notes: '', source: '' });
   renderTable();
   // focus first cell of new row
   const trs = tableBody.querySelectorAll('tr:not(.add-row-row)');
@@ -458,22 +460,52 @@ function parseOCRText(ocrText) {
   else if (/pdu|power\s*distribution/.test(tl)) category = 'PDU';
   else if (/kvm|avocent|raritan/.test(tl)) category = 'KVM';
 
+  // Manufacturer — keyword match against known brands
+  let manufacturer = '';
+  const mfrPatterns = [
+    [/\bhewlett[\s-]packard\b|\b(?:hp|hpe)\b/i, 'HPE'],
+    [/\bdell\b/i, 'Dell'],
+    [/\bcisco\b/i, 'Cisco'],
+    [/\blenovo\b/i, 'Lenovo'],
+    [/\bsupermicro\b/i, 'Supermicro'],
+    [/\bfujitsu\b/i, 'Fujitsu'],
+    [/\bhuawei\b/i, 'Huawei'],
+    [/\barista\b/i, 'Arista'],
+    [/\bjuniper\b/i, 'Juniper'],
+    [/\bnetgear\b/i, 'Netgear'],
+    [/\bfortinet\b/i, 'Fortinet'],
+    [/\bapc\b|american\s*power\s*conversion/i, 'APC'],
+    [/\beaton\b/i, 'Eaton'],
+    [/\bsocomec\b/i, 'Socomec'],
+    [/\bvertiv\b/i, 'Vertiv'],
+    [/\bschneider\b/i, 'Schneider Electric'],
+    [/\bnetapp\b/i, 'NetApp'],
+    [/\bpure\s*storage\b/i, 'Pure Storage'],
+    [/\bwestern\s*digital\b|\bwd\b/i, 'Western Digital'],
+    [/\bseagate\b/i, 'Seagate'],
+    [/\bintel\b/i, 'Intel'],
+    [/\bamd\b/i, 'AMD'],
+  ];
+  for (const [re, name] of mfrPatterns) {
+    if (re.test(t)) { manufacturer = name; break; }
+  }
+
   // Hostname / asset tag hints
   const hostMatch = t.match(/(?:hostname|host|asset|tag)[\s:]+(\S+)/i);
   if (hostMatch) notes = hostMatch[1].trim();
 
-  return { serialNumber, partNumber, category, notes };
+  return { serialNumber, partNumber, category, manufacturer, notes };
 }
 
 async function callAIBuilder(flowUrl, dataUrl) {
   const base64  = dataUrl.split(',')[1];
   const mimeType = dataUrl.split(';')[0].split(':')[1];
   const ocrText = await callFlow(flowUrl, base64, mimeType);
-  const { serialNumber, partNumber, category, notes } = parseOCRText(ocrText);
+  const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
   // Raw photo upload — rack/U unknown, user fills in
   return [{
     rack: '', startU: '', endU: '',
-    category, partNumber, serialNumber, notes,
+    category, manufacturer, partNumber, serialNumber, notes,
     source: ''
   }];
 }
@@ -482,13 +514,13 @@ async function callAIBuilder(flowUrl, dataUrl) {
 exportBtn.addEventListener('click', () => {
   if (!rows.length) return;
   const wsData = [
-    ['Rack #', 'Start U', 'End U', 'Category', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.partNumber, r.serialNumber, r.notes, r.source])
+    ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
+    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Column widths
-  ws['!cols'] = [12, 8, 8, 16, 22, 22, 24, 20].map(w => ({ wch: w }));
+  ws['!cols'] = [12, 8, 8, 16, 18, 22, 22, 24, 20].map(w => ({ wch: w }));
 
   // Header style (basic)
   const range = XLSX.utils.decode_range(ws['!ref']);
@@ -512,11 +544,11 @@ function sanitizeFilename(s) {
 
 function buildExcelBlob() {
   const wsData = [
-    ['Rack #', 'Start U', 'End U', 'Category', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.partNumber, r.serialNumber, r.notes, r.source])
+    ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
+    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [12, 8, 8, 16, 22, 22, 24, 20].map(w => ({ wch: w }));
+  ws['!cols'] = [12, 8, 8, 16, 18, 22, 22, 24, 20].map(w => ({ wch: w }));
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
     const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
@@ -747,12 +779,13 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   const base64  = dataUrl.split(',')[1];
   const mimeType = dataUrl.split(';')[0].split(':')[1];
   const ocrText = await callFlow(flowUrl, base64, mimeType);
-  const { serialNumber, partNumber, notes: ocrNotes } = parseOCRText(ocrText);
+  const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
 
   // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null
   const existingIdx = rows.findIndex(r => r.rack === meta.rack && r.startU === meta.startU && r.endU === meta.endU);
   if (existingIdx !== -1) {
     const existing = rows[existingIdx];
+    if (!existing.manufacturer && manufacturer) existing.manufacturer = manufacturer;
     if (!existing.partNumber && partNumber) existing.partNumber = partNumber;
     if (!existing.serialNumber && serialNumber) existing.serialNumber = serialNumber;
     if (ocrNotes && !existing.notes.includes(ocrNotes)) existing.notes = [existing.notes, ocrNotes].filter(Boolean).join('; ');
@@ -764,6 +797,7 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     startU: meta.startU,
     endU: meta.endU,
     category: meta.category,
+    manufacturer,
     partNumber,
     serialNumber,
     notes: [meta.notes, ocrNotes].filter(Boolean).join('; '),
