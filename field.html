@@ -177,9 +177,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <h1>Rack Field Capture</h1>
       <p>Photograph and tag datacenter equipment</p>
     </div>
-    <div class="section-label">Sessions</div>
+    <div class="section-label">Racks</div>
     <div class="session-list" id="session-list">
-      <div class="empty-hint">No sessions yet.<br>Tap + to start a new rack survey.</div>
+      <div class="empty-hint">No racks yet.<br>Tap + to start a new rack survey.</div>
     </div>
   </div>
   <button class="fab" id="new-session-btn">+</button>
@@ -199,7 +199,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <div class="screen" id="screen-export">
   <div class="topbar">
     <button class="topbar-back" id="export-back">‹</button>
-    <h2>Export Session</h2>
+    <h2>Export Rack</h2>
   </div>
   <div class="body no-pad-bottom" id="export-body"></div>
 </div>
@@ -217,7 +217,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <label>Location / Notes (optional)</label>
       <input id="new-rack-notes" type="text" placeholder="e.g. Level 2, Aisle B" autocomplete="off">
     </div>
-    <button class="btn-full btn-primary" id="create-session-btn" style="margin-top:4px">Start Survey</button>
+    <button class="btn-full btn-primary" id="create-session-btn" style="margin-top:4px">Start Rack Survey</button>
     <button class="btn-full btn-secondary" id="cancel-new-btn" style="margin-top:10px">Cancel</button>
   </div>
 </div>
@@ -709,9 +709,9 @@ function showExport() {
         ${item.partNumber   ? `<div style="font-size:12px;font-family:monospace;color:#a3e635">P/N: ${item.partNumber}</div>` : ''}
       </div>`).join('')}
     <div style="height:16px"></div>
-    <button class="btn-full btn-primary" onclick="exportJSON()" style="margin-bottom:10px">Download Session JSON</button>
-    <button class="btn-full btn-danger" onclick="deleteSession()" style="margin-bottom:20px">Delete Session</button>
-    <p style="font-size:12px;color:var(--muted);text-align:center;padding-bottom:20px">Import this JSON in the desktop scanner. Items with barcodes scanned won't need Claude to read them.</p>`;
+    <button class="btn-full btn-primary" onclick="exportJSON()" style="margin-bottom:10px">Download Rack JSON</button>
+    <button class="btn-full btn-danger" onclick="deleteSession()" style="margin-bottom:20px">Delete Rack</button>
+    <p style="font-size:12px;color:var(--muted);text-align:center;padding-bottom:20px">Import this JSON in the desktop scanner. Items with barcodes scanned won't need AI Builder to read them.</p>`;
   showScreen('screen-export');
 }
 
@@ -726,7 +726,7 @@ function exportJSON() {
 }
 
 function deleteSession() {
-  if (!confirm(`Delete session "${sessions[currentSessionIdx].rackId}"?`)) return;
+  if (!confirm(`Delete rack "${sessions[currentSessionIdx].rackId}"?`)) return;
   sessions.splice(currentSessionIdx, 1);
   persist(); renderHome(); showScreen('screen-home');
 }
