@@ -408,9 +408,14 @@ async function callFlow(flowUrl, base64, mimeType) {
     body: base64
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
-  const data = await res.json();
-  if (!data.text && data.text !== '') throw new Error('Flow response missing "text" field — check your flow Response action');
-  return data.text;
+  const raw = await res.text();
+  // Accept plain text response (simplest) or {"text":"..."} JSON
+  try {
+    const data = JSON.parse(raw);
+    return typeof data === 'string' ? data : (data.text ?? '');
+  } catch {
+    return raw; // plain text response from flow
+  }
 }
 
 // Parse serial number and part number from raw AI Builder OCR text
