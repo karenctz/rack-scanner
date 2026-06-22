@@ -455,7 +455,8 @@ function renderRackScreen() {
     ${s.items.map((item, i) => renderItemCard(item, i)).join('')}
     <button class="add-item-btn" onclick="openItemSheet(null)">
       <span style="font-size:22px">+</span> Add Equipment Item
-    </button>`;
+    </button>
+    <button class="btn-full btn-primary" style="margin-top:16px" onclick="saveAndExitRack()">Save &amp; Exit</button>`;
 }
 
 function renderItemCard(item, i) {
@@ -501,6 +502,13 @@ function renderItemCard(item, i) {
 document.getElementById('rack-back').addEventListener('click', () => {
   persist(); renderHome(); showScreen('screen-home');
 });
+
+function saveAndExitRack() {
+  persist();
+  toast('Rack saved');
+  renderHome();
+  showScreen('screen-home');
+}
 
 // ── Rack overview photos ───────────────────────
 function openRackPhotos(side) {
