@@ -1,0 +1,139 @@
+- rectHeader:
+    Control: Rectangle
+    Properties:
+      Fill: =RGBA(31, 41, 55, 1)
+      Height: =68
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- lblAppTitle:
+    Control: Label
+    Properties:
+      Text: ="Rack Survey"
+      X: =16
+      Y: =0
+      Width: =Parent.Width - 96
+      Height: =68
+      Color: =RGBA(255, 255, 255, 1)
+      Size: =20
+      FontWeight: =FontWeight.Bold
+      VerticalAlign: =VerticalAlign.Middle
+
+- btnNewRack:
+    Control: Button
+    Properties:
+      Text: ="+ New"
+      X: =Parent.Width - 88
+      Y: =14
+      Width: =76
+      Height: =40
+      Fill: =RGBA(79, 110, 247, 1)
+      Color: =RGBA(255, 255, 255, 1)
+      BorderColor: =RGBA(79, 110, 247, 1)
+      BorderRadius: =8
+      FontWeight: =FontWeight.Bold
+      OnSelect: =Set(gblEditMode, false); Set(gblRackRecord, Defaults('Rack Surveys')); Navigate(RackScreen, ScreenTransition.Cover)
+
+- galRacks:
+    Control: Gallery
+    Variant: galleryVertical
+    Properties:
+      Items: =Sort('Rack Surveys', 'Created On', SortOrder.Descending)
+      X: =0
+      Y: =68
+      Width: =Parent.Width
+      Height: =Parent.Height - 68
+      TemplatePadding: =0
+      TemplateSize: =88
+      ShowScrollbar: =false
+    Children:
+    - rectGalBg:
+        Control: Rectangle
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =Parent.TemplateHeight
+          Fill: =RGBA(255, 255, 255, 1)
+          BorderColor: =RGBA(226, 232, 240, 1)
+          BorderThickness: =1
+    - lblRackId:
+        Control: Label
+        Properties:
+          Text: =ThisItem.Name
+          X: =16
+          Y: =12
+          Width: =220
+          Height: =30
+          Size: =16
+          FontWeight: =FontWeight.Bold
+          Color: =RGBA(30, 41, 59, 1)
+    - lblLocation:
+        Control: Label
+        Properties:
+          Text: =If(IsBlank(ThisItem.'Location'), "No location", ThisItem.'Location')
+          X: =16
+          Y: =44
+          Width: =220
+          Height: =24
+          Size: =13
+          Color: =RGBA(100, 116, 139, 1)
+    - rectStatusBadge:
+        Control: Rectangle
+        Properties:
+          X: =Parent.Width - 116
+          Y: =22
+          Width: =88
+          Height: =26
+          BorderRadius: =13
+          Fill: =Switch(ThisItem.'Status'.Value, "Pending", RGBA(241,245,249,1), "In Progress", RGBA(254,243,199,1), "Complete", RGBA(240,253,244,1), RGBA(241,245,249,1))
+    - lblStatus:
+        Control: Label
+        Properties:
+          Text: =ThisItem.'Status'.Value
+          X: =Parent.Width - 116
+          Y: =22
+          Width: =88
+          Height: =26
+          Size: =12
+          FontWeight: =FontWeight.Bold
+          Color: =Switch(ThisItem.'Status'.Value, "Pending", RGBA(100,116,139,1), "In Progress", RGBA(161,98,7,1), "Complete", RGBA(22,163,74,1), RGBA(100,116,139,1))
+          Align: =Align.Center
+          VerticalAlign: =VerticalAlign.Middle
+    - icnChevron:
+        Control: Icon
+        Properties:
+          Icon: =Icon.ChevronRight
+          X: =Parent.Width - 28
+          Y: =30
+          Width: =24
+          Height: =24
+          Color: =RGBA(148, 163, 184, 1)
+    - btnSelectRack:
+        Control: Button
+        Properties:
+          Text: =""
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =Parent.TemplateHeight
+          Fill: =RGBA(0, 0, 0, 0)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          HoverFill: =RGBA(79, 110, 247, 0.06)
+          PressedFill: =RGBA(79, 110, 247, 0.1)
+          OnSelect: =Set(gblEditMode, true); Set(gblRackRecord, ThisItem); Navigate(RackScreen, ScreenTransition.Cover)
+
+- lblEmpty:
+    Control: Label
+    Properties:
+      Text: ="No rack surveys yet." & Char(10) & "Tap + New to get started."
+      Visible: =CountRows('Rack Surveys') = 0
+      X: =0
+      Y: =200
+      Width: =Parent.Width
+      Height: =80
+      Size: =15
+      Color: =RGBA(148, 163, 184, 1)
+      Align: =Align.Center
+      VerticalAlign: =VerticalAlign.Middle

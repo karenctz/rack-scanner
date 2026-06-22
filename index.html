@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rack Asset Scanner</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-PkeWL+Obe0sXAqhBRhcqNb5kIwjz1cRl7N0uRNgM0pFJMEFGcLJDAFJIEaGVCNH" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-GsNqoxQfD8X2OwCVGkz3p1ql7lGU0Z7MWlv3gfgblkIqJhe3mTHa3RsMYmYF7X7" crossorigin="anonymous"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
@@ -223,9 +224,9 @@ function renderErrorLog() {
   badge.textContent = errorLog.length;
   body.innerHTML = errorLog.map(e => `
     <div class="error-log-entry">
-      <span class="error-log-time">${e.ts}</span>
-      <span class="error-log-label">${e.label}</span>
-      <span class="error-log-msg">${e.message}</span>
+      <span class="error-log-time">${esc(e.ts)}</span>
+      <span class="error-log-label">${esc(e.label)}</span>
+      <span class="error-log-msg">${esc(e.message)}</span>
     </div>`).join('');
   body.scrollTop = body.scrollHeight;
 }
@@ -242,9 +243,7 @@ function copyErrorLog() {
 function downloadErrorLog() {
   const text = errorLog.map(e => `[${e.ts}] ${e.label}: ${e.message}`).join('\n');
   const blob = new Blob([text], { type: 'text/plain' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `rack-scanner-errors-${new Date().toISOString().slice(0,10)}.txt`;
-  a.click(); URL.revokeObjectURL(a.href);
+  triggerDownload(URL.createObjectURL(blob), `rack-scanner-errors-${new Date().toISOString().slice(0,10)}.txt`);
 }
 
 function clearErrorLog() {
@@ -267,10 +266,10 @@ const progressWrap = document.getElementById('progressWrap');
 const progressBar = document.getElementById('progressBar');
 const scanIcon = document.getElementById('scanIcon');
 
-// Persist Flow URL
-const savedKey = localStorage.getItem('rack_scanner_flow_url');
+// Persist Flow URL in sessionStorage (clears on tab close — avoids leaving signed URL on disk)
+const savedKey = sessionStorage.getItem('rack_scanner_flow_url');
 if (savedKey) apiKeyEl.value = savedKey;
-apiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_flow_url', apiKeyEl.value));
+apiKeyEl.addEventListener('change', () => sessionStorage.setItem('rack_scanner_flow_url', apiKeyEl.value));
 
 // Drag & drop
 dropzone.addEventListener('click', () => fileInput.click());
@@ -354,6 +353,17 @@ function renderTable() {
 }
 
 function esc(v) { return (v ?? '').toString().replace(/"/g, '&quot;'); }
+
+// Power Apps WebView2 blocks programmatic anchor clicks — fall back to window.open
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // If still on page after 800ms, the click was swallowed — open in new tab as fallback
+  setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 800);
+}
 function updateRow(i, field, val) { rows[i][field] = val; }
 function deleteRow(i) { rows.splice(i, 1); renderTable(); }
 function addEmptyRow() {
@@ -414,9 +424,10 @@ scanBtn.addEventListener('click', async () => {
 // Sends image as text/plain to avoid CORS preflight on the flow URL.
 // Flow must respond with { text: "...raw ocr text..." }
 
-async function callFlow(flowUrl, base64, mimeType) {
-  // Send raw base64 string as plain text — no JSON wrapping.
-  // Flow reads triggerBody() directly as the base64 image, no Parse JSON step needed.
+async function callFlow(flowUrl, base64, mimeType, opts = {}) {
+  if (!/^https:\/\/prod-[^/]+\.logic\.azure\.com\//i.test(flowUrl))
+    throw new Error('Flow URL must be a Power Automate logic.azure.com endpoint');
+  if (!base64) throw new Error('Image data is empty — could not read the file');
   const res = await fetch(flowUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
@@ -424,12 +435,11 @@ async function callFlow(flowUrl, base64, mimeType) {
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const raw = await res.text();
-  // Accept plain text response (simplest) or {"text":"..."} JSON
   try {
     const data = JSON.parse(raw);
     return typeof data === 'string' ? data : (data.text ?? '');
   } catch {
-    return raw; // plain text response from flow
+    return raw;
   }
 }
 
@@ -503,10 +513,24 @@ function parseOCRText(ocrText) {
   return { serialNumber, partNumber, category, manufacturer, notes };
 }
 
+async function toJpegBase64(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.92).split(',')[1]);
+    };
+    img.onerror = () => reject(new Error('Could not decode image'));
+    img.src = dataUrl;
+  });
+}
+
 async function callAIBuilder(flowUrl, dataUrl) {
-  const base64  = dataUrl.split(',')[1];
-  const mimeType = dataUrl.split(';')[0].split(':')[1];
-  const ocrText = await callFlow(flowUrl, base64, mimeType);
+  const base64  = await toJpegBase64(dataUrl);
+  const mimeType = 'image/jpeg';
+  const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg' });
   const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
   // Raw photo upload — rack/U unknown, user fills in
   return [{
@@ -539,7 +563,9 @@ exportBtn.addEventListener('click', () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Assets');
 
   const date = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `rack-assets-${date}.xlsx`);
+  const xlsxArr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const xlsxBlob = new Blob([xlsxArr], { type: 'application/octet-stream' });
+  triggerDownload(URL.createObjectURL(xlsxBlob), `rack-assets-${date}.xlsx`);
   toast('Excel file downloaded', 'success');
 });
 
@@ -620,11 +646,7 @@ exportZipBtn.addEventListener('click', async () => {
     });
 
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `rack-assets-${date}.zip`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    triggerDownload(URL.createObjectURL(blob), `rack-assets-${date}.zip`);
     toast(`ZIP downloaded — ${photos.length} photo(s) + Excel`, 'success');
   } catch (err) {
     logError('ZIP export', err.message);
@@ -655,6 +677,7 @@ document.getElementById('importBtn').addEventListener('click', () => {
 document.getElementById('importInput').addEventListener('change', function() {
   const file = this.files[0];
   if (!file) return;
+  if (file.size > 100 * 1024 * 1024) { toast('File too large (max 100 MB)', 'error'); this.value = ''; return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -829,9 +852,9 @@ function removeImportedSession(si) {
 
 async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   // Rack/U/category already known from field app — just extract part # and serial # from OCR
-  const base64  = dataUrl.split(',')[1];
-  const mimeType = dataUrl.split(';')[0].split(':')[1];
-  const ocrText = await callFlow(flowUrl, base64, mimeType);
+  const base64  = await toJpegBase64(dataUrl);
+  const mimeType = 'image/jpeg';
+  const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg', rackId: meta.rack });
   const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
 
   // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null

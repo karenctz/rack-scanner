@@ -6,6 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Rack Field Capture</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -35,8 +36,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .home-header p { color: var(--muted); font-size: 14px; margin-top: 6px; }
 
 .session-list { display: flex; flex-direction: column; gap: 10px; }
-.session-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.15s; }
+.session-list .session-card-wrap { margin-bottom: 0; }
+.session-card-wrap { display: flex; align-items: stretch; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); margin-bottom: 0; }
+.session-card { background: var(--surface); padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.15s; flex: 1; min-width: 0; }
 .session-card:active { background: var(--surface2); }
+.card-delete-btn { background: #2d1515; color: var(--red); border: none; border-left: 1px solid var(--border); padding: 0 18px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.card-delete-btn:active { background: var(--red); color: white; }
 .session-card-info { flex: 1; min-width: 0; }
 .session-card-info h3 { font-size: 15px; font-weight: 600; }
 .session-card-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -175,6 +180,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div style="flex:1">
       <div style="font-size:17px;font-weight:700">Rack Field Capture</div>
     </div>
+    <button class="topbar-action" id="delete-all-btn" style="display:none;color:var(--red)">Delete All</button>
     <button class="topbar-action" id="export-all-btn" style="display:none">Export All</button>
   </div>
   <div class="body no-pad-bottom" style="padding-bottom: calc(90px + var(--safe-bottom));">
@@ -352,27 +358,49 @@ function showScreen(id) {
 // ── Home ───────────────────────────────────────
 function renderHome() {
   const list = document.getElementById('session-list');
-  if (!sessions.length) {
+  const hasSessions = sessions.length > 0;
+  document.getElementById('export-all-btn').style.display = hasSessions ? 'block' : 'none';
+  document.getElementById('delete-all-btn').style.display = hasSessions ? 'block' : 'none';
+  if (!hasSessions) {
     list.innerHTML = '<div class="empty-hint">No sessions yet.<br>Tap + to start a new rack survey.</div>';
     return;
   }
-  document.getElementById('export-all-btn').style.display = sessions.length ? 'block' : 'none';
   list.innerHTML = sessions.map((s, i) => {
     const itemCount = s.items.length;
     const scannedCount = s.items.filter(it => it.serialNumber).length;
     const photoCount = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,it)=>n+(it.photos?.length||0),0);
     return `
-    <div class="session-card" onclick="openSession(${i})">
-      <div style="font-size:28px">🗄️</div>
-      <div class="session-card-info">
-        <h3>${s.rackId}</h3>
-        <p>${s.notes||''} · ${itemCount} item${itemCount!==1?'s':''} · ${photoCount} photo${photoCount!==1?'s':''}</p>
-        <p style="color:var(--muted);font-size:11px;margin-top:2px">${scannedCount > 0 ? `${scannedCount} barcode${scannedCount!==1?'s':''} scanned · ` : ''}${new Date(s.createdAt).toLocaleString()}</p>
+    <div class="session-card-wrap" id="card-wrap-${i}">
+      <div class="session-card" onclick="openSession(${i})">
+        <div style="font-size:28px">🗄️</div>
+        <div class="session-card-info">
+          <h3>${s.rackId}</h3>
+          <p>${s.notes||''} · ${itemCount} item${itemCount!==1?'s':''} · ${photoCount} photo${photoCount!==1?'s':''}</p>
+          <p style="color:var(--muted);font-size:11px;margin-top:2px">${scannedCount > 0 ? `${scannedCount} barcode${scannedCount!==1?'s':''} scanned · ` : ''}${new Date(s.createdAt).toLocaleString()}</p>
+        </div>
+        <div class="session-card-chevron">›</div>
       </div>
-      <div class="session-card-chevron">›</div>
+      <button class="card-delete-btn" onclick="deleteSessionByIndex(${i})">🗑 Delete</button>
     </div>`;
   }).join('');
 }
+
+function deleteSessionByIndex(i) {
+  if (!confirm(`Delete rack "${sessions[i].rackId}"? This cannot be undone.`)) return;
+  sessions.splice(i, 1);
+  persist();
+  renderHome();
+  toast('Rack deleted');
+}
+
+document.getElementById('delete-all-btn').addEventListener('click', () => {
+  if (!sessions.length) return;
+  if (!confirm(`Delete all ${sessions.length} rack survey${sessions.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+  sessions = [];
+  persist();
+  renderHome();
+  toast('All racks deleted');
+});
 
 document.getElementById('new-session-btn').addEventListener('click', () => {
   document.getElementById('new-rack-id').value = '';
@@ -717,23 +745,26 @@ function showExport() {
   showScreen('screen-export');
 }
 
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 800);
+}
+
 function exportJSON() {
   const s = sessions[currentSessionIdx];
   const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `rack-${s.rackId}-${Date.now()}.json`;
-  a.click(); URL.revokeObjectURL(url);
+  triggerDownload(URL.createObjectURL(blob), `rack-${s.rackId}-${Date.now()}.json`);
   toast('Downloaded!');
 }
 
 function exportAllJSON() {
   if (!sessions.length) return;
   const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `all-racks-${Date.now()}.json`;
-  a.click(); URL.revokeObjectURL(url);
+  triggerDownload(URL.createObjectURL(blob), `all-racks-${Date.now()}.json`);
   toast(`Exported ${sessions.length} rack${sessions.length !== 1 ? 's' : ''}`);
 }
 
