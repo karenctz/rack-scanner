@@ -426,7 +426,7 @@ scanBtn.addEventListener('click', async () => {
 // Flow must respond with { text: "...raw ocr text..." }
 
 async function callFlow(flowUrl, body, mimeType, opts = {}) {
-  if (!/^https:\/\/[^/]*\.logic\.azure\.com\//i.test(flowUrl))
+  if (!/^https:\/\/[^/]*\.logic\.azure\.com(:\d+)?\//i.test(flowUrl))
     throw new Error('Flow URL must be a Power Automate logic.azure.com endpoint');
   if (!body) throw new Error('Image data is empty — could not read the file');
   const res = await fetch(flowUrl, {
