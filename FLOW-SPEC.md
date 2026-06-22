@@ -16,26 +16,17 @@ Two flows are required:
 ### Trigger
 **When an HTTP request is received**
 - Method: POST
-- Request body schema: none (body is raw base64 image string, Content-Type: text/plain)
+- Request body schema: none (body is raw binary JPEG, Content-Type: image/jpeg)
 - Authentication: none (URL is secret — keep it private)
 
 ### Steps
 
-**Step 1 — Parse the body**
-- Action: `Initialize variable`
-- Name: `ImageBase64`
-- Type: String
-- Value: `@{triggerBody()}` (the raw POST body)
-
-**Step 2 — Run AI Builder Text Recognizer**
+**Step 1 — Run AI Builder Text Recognizer**
 - Action: `AI Builder → Extract information from documents` (Text recognition model)
 - Document type: Image
-- Document content: `@{variables('ImageBase64')}` (base64)
+- Document content: `@{triggerBody()}` — the raw binary body directly
 
-> If the AI Builder action requires a file rather than base64, add a Compose step first:
-> - Action: `Compose`
-> - Input: `@{base64ToBinary(variables('ImageBase64'))}`
-> Then pass the Compose output as the document.
+> **Important:** Do NOT wrap with `base64ToBinary()`. The app sends binary JPEG directly, so `triggerBody()` is already binary. Using `base64ToBinary(triggerBody())` will produce an InvalidImage error.
 
 **Step 3 — Build the response text**
 - Action: `Compose`
@@ -156,13 +147,10 @@ To find your actual prefix: open the table in make.powerapps.com → Columns →
 Once published, test with curl or Postman:
 
 ```bash
-# Encode a test image
-base64 -i test-label.jpg -o test-label.b64
-
-# POST to flow URL
+# POST binary JPEG directly to flow URL
 curl -X POST "https://prod-xx.logic.azure.com/..." \
-  -H "Content-Type: text/plain" \
-  --data-binary @test-label.b64
+  -H "Content-Type: image/jpeg" \
+  --data-binary @test-label.jpg
 ```
 
 Expected response:
