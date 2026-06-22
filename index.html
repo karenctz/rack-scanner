@@ -421,18 +421,18 @@ scanBtn.addEventListener('click', async () => {
 });
 
 // ── AI Builder via Power Automate ─────────────
-// Sends image as binary (image/jpeg) to the flow.
-// Flow AI Builder step should use triggerBody() directly (no base64ToBinary wrapper).
+// Sends JPEG base64 as text/plain (CORS simple request — no preflight).
+// Flow AI Builder step must use: base64ToBinary(triggerBody())
 // Flow must respond with { text: "...raw ocr text..." }
 
-async function callFlow(flowUrl, body, mimeType, opts = {}) {
+async function callFlow(flowUrl, base64, mimeType, opts = {}) {
   if (!/^https:\/\/[^/]*\.(logic\.azure\.com|api\.powerplatform\.com)(:\d+)?\//i.test(flowUrl))
     throw new Error('Flow URL must be a Power Automate endpoint');
-  if (!body) throw new Error('Image data is empty — could not read the file');
+  if (!base64) throw new Error('Image data is empty — could not read the file');
   const res = await fetch(flowUrl, {
     method: 'POST',
-    headers: { 'Content-Type': mimeType || 'image/jpeg' },
-    body
+    headers: { 'Content-Type': 'text/plain' },
+    body: base64
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const raw = await res.text();
@@ -514,14 +514,14 @@ function parseOCRText(ocrText) {
   return { serialNumber, partNumber, category, manufacturer, notes };
 }
 
-async function toJpegBlob(dataUrl) {
+async function toJpegBase64(dataUrl) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width; canvas.height = img.height;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.92);
+      resolve(canvas.toDataURL('image/jpeg', 0.92).split(',')[1]);
     };
     img.onerror = () => reject(new Error('Could not decode image'));
     img.src = dataUrl;
@@ -529,8 +529,8 @@ async function toJpegBlob(dataUrl) {
 }
 
 async function callAIBuilder(flowUrl, dataUrl) {
-  const blob = await toJpegBlob(dataUrl);
-  const ocrText = await callFlow(flowUrl, blob, 'image/jpeg', { fileName: 'photo.jpg' });
+  const base64 = await toJpegBase64(dataUrl);
+  const ocrText = await callFlow(flowUrl, base64, 'image/jpeg', { fileName: 'photo.jpg' });
   const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
   // Raw photo upload — rack/U unknown, user fills in
   return [{
@@ -852,8 +852,8 @@ function removeImportedSession(si) {
 
 async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   // Rack/U/category already known from field app — just extract part # and serial # from OCR
-  const blob = await toJpegBlob(dataUrl);
-  const ocrText = await callFlow(flowUrl, blob, 'image/jpeg', { fileName: 'photo.jpg', rackId: meta.rack });
+  const base64 = await toJpegBase64(dataUrl);
+  const ocrText = await callFlow(flowUrl, base64, 'image/jpeg', { fileName: 'photo.jpg', rackId: meta.rack });
   const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
 
   // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null
