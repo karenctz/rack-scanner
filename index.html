@@ -429,11 +429,10 @@ async function callFlow(flowUrl, base64, mimeType, opts = {}) {
   if (!/^https:\/\/[^/]*\.(logic\.azure\.com|api\.powerplatform\.com)(:\d+)?\//i.test(flowUrl))
     throw new Error('Flow URL must be a Power Automate endpoint');
   if (!base64) throw new Error('Image data is empty — could not read the file');
-  console.log('[callFlow] body length:', base64.length, '| first 20 chars:', base64.slice(0, 20));
   const res = await fetch(flowUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: base64
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ img: base64 })
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const raw = await res.text();
