@@ -425,10 +425,14 @@ async function callFlow(flowUrl, base64, mimeType, opts = {}) {
   if (!/^https:\/\/[^/]*\.(logic\.azure\.com|api\.powerplatform\.com)(:\d+)?\//i.test(flowUrl))
     throw new Error('Flow URL must be a Power Automate endpoint');
   if (!base64) throw new Error('Image data is empty — could not read the file');
+  // Convert base64 → binary and POST as the image's actual content type
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   const res = await fetch(flowUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ img: base64 })
+    headers: { 'Content-Type': mimeType || 'image/jpeg' },
+    body: bytes.buffer
   });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const raw = await res.text();
@@ -531,17 +535,40 @@ function stripJpegMetadata(base64) {
   return btoa(str);
 }
 
-async function toJpegBase64(dataUrl) {
+// AI Builder supports: JPEG, PNG, BMP, TIFF. WebP and HEIC must be converted to JPEG.
+const AI_BUILDER_NATIVE = new Set(['image/jpeg', 'image/png', 'image/bmp', 'image/tiff']);
+
+async function prepareImage(dataUrl) {
+  const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+  const srcMime = mimeMatch ? mimeMatch[1].toLowerCase() : 'image/jpeg';
+  const needsConvert = !AI_BUILDER_NATIVE.has(srcMime);
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const MAX = 1600;
       let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+      const tooBig = w > MAX || h > MAX;
+
+      if (!needsConvert && !tooBig) {
+        // Send as-is — strip data URL prefix
+        resolve({ base64: dataUrl.split(',')[1], mimeType: srcMime });
+        return;
+      }
+
+      // Resize and/or convert via canvas
+      if (tooBig) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(stripJpegMetadata(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]));
+
+      const outMime = needsConvert ? 'image/jpeg' : srcMime;
+      const quality = outMime === 'image/jpeg' ? 0.85 : undefined;
+      const b64 = canvas.toDataURL(outMime, quality).split(',')[1];
+      resolve({ base64: outMime === 'image/jpeg' ? stripJpegMetadata(b64) : b64, mimeType: outMime });
     };
     img.onerror = () => reject(new Error('Could not decode image'));
     img.src = dataUrl;
@@ -549,8 +576,8 @@ async function toJpegBase64(dataUrl) {
 }
 
 async function callAIBuilder(flowUrl, dataUrl) {
-  const base64 = await toJpegBase64(dataUrl);
-  const ocrText = await callFlow(flowUrl, base64, 'image/jpeg', { fileName: 'photo.jpg' });
+  const { base64, mimeType } = await prepareImage(dataUrl);
+  const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg' });
   const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
   // Raw photo upload — rack/U unknown, user fills in
   return [{
@@ -864,8 +891,8 @@ function removeImportedSession(si) {
 
 async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   // Rack/U/category already known from field app — just extract part # and serial # from OCR
-  const base64 = await toJpegBase64(dataUrl);
-  const ocrText = await callFlow(flowUrl, base64, 'image/jpeg', { fileName: 'photo.jpg', rackId: meta.rack });
+  const { base64, mimeType } = await prepareImage(dataUrl);
+  const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg', rackId: meta.rack });
   const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
 
   // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null
