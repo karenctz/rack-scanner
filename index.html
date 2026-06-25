@@ -145,6 +145,8 @@
   <div class="api-bar">
     <label>Power Automate Flow URL</label>
     <input type="text" id="apiKey" placeholder="https://prod-xx.westus.logic.azure.com/workflows/..." autocomplete="off" spellcheck="false">
+    <label style="margin-left:8px;white-space:nowrap">API Key:</label>
+    <input type="password" id="flowApiKey" placeholder="x-api-key secret" autocomplete="off" spellcheck="false" style="flex:0 0 160px;font-family:monospace">
     <label style="margin-left:8px">Engineer:</label>
     <input type="text" id="engineerName" placeholder="Your name" autocomplete="off" style="flex:0 0 160px">
   </div>
@@ -406,6 +408,12 @@ const savedKey = sessionStorage.getItem('rack_scanner_flow_url');
 if (savedKey) apiKeyEl.value = savedKey;
 apiKeyEl.addEventListener('change', () => sessionStorage.setItem('rack_scanner_flow_url', apiKeyEl.value));
 
+// Persist API key in localStorage
+const flowApiKeyEl = document.getElementById('flowApiKey');
+const savedFlowApiKey = localStorage.getItem('rack_scanner_api_key');
+if (savedFlowApiKey) flowApiKeyEl.value = savedFlowApiKey;
+flowApiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_api_key', flowApiKeyEl.value));
+
 // Persist engineer name in localStorage
 const engineerEl = document.getElementById('engineerName');
 const savedEngineer = localStorage.getItem('rack_scanner_engineer');
@@ -663,11 +671,10 @@ async function callFlow(flowUrl, base64, mimeType, opts = {}) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const res = await fetch(flowUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': mimeType || 'image/jpeg' },
-    body: bytes.buffer
-  });
+  const headers = { 'Content-Type': mimeType || 'image/jpeg' };
+  const apiKey = document.getElementById('flowApiKey')?.value.trim();
+  if (apiKey) headers['x-api-key'] = apiKey;
+  const res = await fetch(flowUrl, { method: 'POST', headers, body: bytes.buffer });
   if (!res.ok) throw new Error(`Flow returned HTTP ${res.status}`);
   const raw = await res.text();
   try {
