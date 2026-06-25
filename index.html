@@ -276,6 +276,13 @@
   </div>
 </div>
 
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-label"></div>
+</div>
+
 <script>
 const CATEGORIES = ['Server', 'Network Switch', 'UPS', 'Storage', 'PDU', 'KVM', 'Other'];
 
@@ -1384,12 +1391,5 @@ function closeLightbox() { document.getElementById('lightbox').classList.remove(
 renderTable();
 </script>
 <div id="toast-stack"></div>
-
-<!-- Lightbox -->
-<div id="lightbox">
-  <button id="lightbox-close">✕</button>
-  <img id="lightbox-img" src="" alt="">
-  <div id="lightbox-label"></div>
-</div>
 </body>
 </html>
