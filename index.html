@@ -160,6 +160,12 @@
     <button class="btn btn-danger" id="clearBtn">Clear All</button>
   </div>
 
+  <!-- Rack filter for export -->
+  <div id="rackFilterWrap" style="display:none;margin:8px 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="font-size:13px;font-weight:600;color:#374151;">Export racks:</span>
+    <div id="rackFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </div>
+
   <!-- Error log panel (hidden until there are errors) -->
   <div class="error-log-panel" id="errorLogPanel" style="display:none">
     <div class="error-log-header" onclick="toggleErrorLog()">
@@ -346,6 +352,7 @@ function renderTable() {
   tableBody.appendChild(newAddRow);
   exportBtn.disabled = rows.length === 0;
   exportZipBtn.disabled = rows.length === 0;
+  renderRackFilter();
 }
 
 function esc(v) { return (v ?? '').toString().replace(/"/g, '&quot;'); }
@@ -640,12 +647,61 @@ async function callAIBuilder(flowUrl, dataUrl) {
   }];
 }
 
+// ── Rack filter ───────────────────────────────────
+let selectedRacks = new Set(); // empty = all selected
+
+function renderRackFilter() {
+  const wrap = document.getElementById('rackFilterWrap');
+  const chips = document.getElementById('rackFilterChips');
+  const rackIds = [...new Set(rows.map(r => r.rack).filter(Boolean))].sort();
+
+  if (rackIds.length < 2) {
+    wrap.style.display = 'none';
+    selectedRacks = new Set();
+    return;
+  }
+  wrap.style.display = 'flex';
+
+  // Remove deselected racks that no longer exist
+  [...selectedRacks].forEach(r => { if (!rackIds.includes(r)) selectedRacks.delete(r); });
+
+  chips.innerHTML = '';
+
+  // "All" chip
+  const allSelected = selectedRacks.size === 0;
+  const allChip = document.createElement('button');
+  allChip.textContent = 'All';
+  allChip.style.cssText = `padding:2px 10px;border-radius:12px;border:1.5px solid #6366f1;font-size:12px;cursor:pointer;background:${allSelected ? '#6366f1' : '#fff'};color:${allSelected ? '#fff' : '#6366f1'};font-weight:600;`;
+  allChip.onclick = () => { selectedRacks.clear(); renderRackFilter(); };
+  chips.appendChild(allChip);
+
+  rackIds.forEach(rackId => {
+    const active = selectedRacks.has(rackId);
+    const chip = document.createElement('button');
+    chip.textContent = rackId;
+    chip.style.cssText = `padding:2px 10px;border-radius:12px;border:1.5px solid #6366f1;font-size:12px;cursor:pointer;background:${active ? '#6366f1' : '#fff'};color:${active ? '#fff' : '#6366f1'};`;
+    chip.onclick = () => {
+      if (selectedRacks.has(rackId)) selectedRacks.delete(rackId);
+      else selectedRacks.add(rackId);
+      renderRackFilter();
+    };
+    chips.appendChild(chip);
+  });
+}
+
+function filteredRows() {
+  if (selectedRacks.size === 0) return rows;
+  return rows.filter(r => selectedRacks.has(r.rack));
+}
+
 // Export
 exportBtn.addEventListener('click', () => {
   if (!rows.length) return;
+  const exportData = filteredRows();
+  if (!exportData.length) { toast('No rows match the selected racks', 'error'); return; }
   const wsData = [
     ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
+    ...exportData.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
@@ -675,9 +731,10 @@ function sanitizeFilename(s) {
 }
 
 function buildExcelBlob() {
+  const exportData = filteredRows();
   const wsData = [
     ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...rows.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
+    ...exportData.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [12, 8, 8, 16, 18, 22, 22, 24, 20].map(w => ({ wch: w }));
@@ -705,6 +762,7 @@ function collectAllPhotos() {
   importedSessions.forEach(entry => {
     const s = entry.session;
     const rack = s.rackId || 'rack';
+    if (selectedRacks.size > 0 && !selectedRacks.has(rack)) return;
 
     // Rack overview photos
     (s.frontPhotos || []).forEach((dataUrl, i) =>
