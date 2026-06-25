@@ -905,6 +905,12 @@ async function scanLoop() {
   const status = document.getElementById('scanner-status');
   if (!scannerStream || !barcodeDetector) return;
 
+  // Wait until the video has actual frame data before trying to detect
+  if (video.readyState < 2 || video.paused || video.videoWidth === 0) {
+    scannerAnimFrame = setTimeout(scanLoop, 100);
+    return;
+  }
+
   try {
     const barcodes = await barcodeDetector.detect(video);
     if (barcodes.length > 0) {
@@ -912,10 +918,12 @@ async function scanLoop() {
       onBarcodeDetected(value);
       return;
     }
-  } catch(e) {}
+  } catch(e) {
+    status.textContent = 'Scan error: ' + e.message;
+  }
 
-  status.textContent = 'Scanning…';
-  scannerAnimFrame = requestAnimationFrame(scanLoop);
+  // Use setTimeout instead of rAF — gives the camera sensor time between frames
+  scannerAnimFrame = setTimeout(scanLoop, 150);
 }
 
 function startZXing() {
@@ -947,7 +955,7 @@ function startZXing() {
 
 function onBarcodeDetected(value) {
   // Stop camera
-  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+  if (scannerAnimFrame) { clearTimeout(scannerAnimFrame); scannerAnimFrame = null; }
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   if (window._zxingReader) { window._zxingReader.reset(); window._zxingReader = null; }
 
@@ -974,7 +982,7 @@ function onBarcodeDetected(value) {
 
 function closeScanner() {
   clearTimeout(scannerFallbackTimer);
-  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+  if (scannerAnimFrame) { clearTimeout(scannerAnimFrame); scannerAnimFrame = null; }
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   if (window._zxingReader) { window._zxingReader.reset(); window._zxingReader = null; }
   document.getElementById('scanner-overlay').classList.remove('open');
