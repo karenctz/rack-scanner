@@ -887,6 +887,46 @@ function renderImportBanner() {
   }).join('');
 }
 
+// Import a session directly without OCR — used when all items already have serial/part numbers
+function importSessionDirect(si) {
+  const entry = importedSessions[si];
+  const s = entry.session;
+  let added = 0;
+
+  s.items.forEach(item => {
+    const existingIdx = rows.findIndex(r =>
+      r.rack === s.rackId && r.startU === String(item.startU) && r.endU === String(item.endU)
+    );
+    const row = {
+      rack: s.rackId,
+      startU: String(item.startU),
+      endU: String(item.endU),
+      category: item.category || '',
+      manufacturer: item.manufacturer || '',
+      partNumber: item.partNumber || '',
+      serialNumber: item.serialNumber || '',
+      notes: item.notes || '',
+      source: s.rackId
+    };
+    if (existingIdx >= 0) {
+      // Merge — only fill blanks
+      const ex = rows[existingIdx];
+      if (!ex.serialNumber && row.serialNumber) ex.serialNumber = row.serialNumber;
+      if (!ex.partNumber   && row.partNumber)   ex.partNumber   = row.partNumber;
+      if (!ex.manufacturer && row.manufacturer) ex.manufacturer = row.manufacturer;
+    } else {
+      rows.push(row);
+      added++;
+    }
+  });
+
+  entry.scannedCount = s.items.length; // mark as done
+  renderImportBanner();
+  renderTable();
+  if (added > 0) toast(`Imported ${added} item(s) from ${s.rackId}`, 'success');
+  else toast(`${s.rackId}: rows already present`, 'error');
+}
+
 // Build the queued-image list for one session (does NOT add to images[])
 function buildSessionQueue(si) {
   const entry = importedSessions[si];
@@ -948,8 +988,18 @@ async function scanAll() {
   const pendingIdxs = importedSessions.map((e, i) => i).filter(i => (importedSessions[i].scannedCount || 0) < importedSessions[i].session.items.length);
   if (!pendingIdxs.length) { toast('All racks already scanned', 'error'); return; }
 
+  // Sessions with no photos can be imported directly without OCR
+  const directIdxs = pendingIdxs.filter(si => buildSessionQueue(si).length === 0);
+  const ocrIdxs    = pendingIdxs.filter(si => buildSessionQueue(si).length > 0);
+
+  directIdxs.forEach(si => importSessionDirect(si));
+
+  if (!ocrIdxs.length) return; // all sessions had pre-filled data — nothing to OCR
+
+  if (!flowUrl) { toast('Enter your Power Automate Flow URL first', 'error'); return; }
+
   // Build all queues first, push all photos into images[] at once so they're all visible
-  const allQueues = pendingIdxs.map(si => buildSessionQueue(si));
+  const allQueues = ocrIdxs.map(si => buildSessionQueue(si));
   allQueues.forEach(q => q.forEach(qi => images.push(qi)));
   renderPreviews(); // show every photo upfront
 
@@ -959,8 +1009,8 @@ async function scanAll() {
   progressWrap.style.display = 'block';
   progressBar.style.width = '0%';
 
-  for (let i = 0; i < pendingIdxs.length; i++) {
-    await processSessionQueue(pendingIdxs[i], allQueues[i], allQueues);
+  for (let i = 0; i < ocrIdxs.length; i++) {
+    await processSessionQueue(ocrIdxs[i], allQueues[i], allQueues);
   }
 
   scanning = false;
@@ -976,7 +1026,7 @@ async function scanSession(si) {
   const entry = importedSessions[si];
   const s = entry.session;
   const queuedImages = buildSessionQueue(si);
-  if (!queuedImages.length) { toast('No photos found in this session', 'error'); return; }
+  if (!queuedImages.length) { importSessionDirect(si); return; }
 
   queuedImages.forEach(qi => images.push(qi));
   renderPreviews();
