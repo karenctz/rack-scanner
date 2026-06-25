@@ -510,14 +510,14 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h3>Set up the Desktop Scanner</h3>
-        <p>Open <a href="https://karenctz.github.io/rack-scanner/" style="color:var(--accent2)">karenctz.github.io/rack-scanner/</a> on your PC in Chrome or Edge.</p>
+        <p>Open <a href="https://karenctz.github.io/rack-scanner/" style="color:var(--accent2)">karenctz.github.io/rack-scanner/</a> on your PC in Chrome or Edge. The toolbar has two fields to fill in before scanning:</p>
         <ul>
-          <li><strong>Power Automate Flow URL</strong> — paste the HTTP trigger URL from your Power Automate flow (ask your admin if you don't have this)</li>
-          <li><strong>Engineer</strong> — enter your name (saved automatically for next time)</li>
+          <li><strong>Power Automate Flow URL</strong> — the HTTP trigger URL for your Power Automate flow. Ask your admin if you don't have this.</li>
+          <li><strong>API Key</strong> — a shared secret that proves you are authorised to use the flow. Ask your admin for the key. It is masked (shown as dots) and saved automatically so you only need to enter it once per device.</li>
         </ul>
-        <div class="callout callout-info">
-          <span class="callout-icon">ℹ️</span>
-          <p>Your engineer name appears in the <strong>audit log</strong> alongside every scan action so it's traceable who processed what.</p>
+        <div class="callout callout-warn">
+          <span class="callout-icon">🔑</span>
+          <p><strong>Keep the API Key private.</strong> Do not share it in email or chat. If you think the key has been exposed, ask your admin to rotate it in Power Automate.</p>
         </div>
       </div>
     </div>
@@ -950,6 +950,35 @@
       <p style="color:var(--muted);margin-bottom:12px;">The field app stores all data in <strong style="color:var(--text)">browser localStorage</strong> — a per-origin key-value store built into every browser. There is no server, no account, and no sync. Data persists across sessions as long as you don't clear browser storage.</p>
       <p style="color:var(--muted);margin-bottom:12px;">Every time you save an item, the entire sessions array is serialised to JSON and written to localStorage. The <em>"💾 Saved offline"</em> indicator flashes green to confirm each write succeeded.</p>
       <p style="color:var(--muted);">Photos are stored as compressed JPEG base64 strings (max 1600px, ~82% quality). A rack survey with 20 items and 2 photos each typically occupies 10–20 MB of localStorage. Most browsers allow 5–10 MB per origin; if storage fills up, the app will show an error and you should export and clear old sessions.</p>
+    </div>
+
+    <!-- API key -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">🔑 Why an API Key is required</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">The Power Automate HTTP trigger URL is a plain HTTPS endpoint with <strong style="color:var(--text)">no built-in authentication</strong>. Anyone who obtains the URL could send requests to it — consuming your organisation's AI Builder quota and potentially processing unauthorised data.</p>
+      <p style="color:var(--muted);margin-bottom:12px;">The API Key adds a layer of protection. Every request the desktop app sends includes an <code>x-api-key</code> HTTP header containing the secret. Power Automate checks this header at the start of the flow — if it is missing or wrong, the flow immediately returns <code>401 Unauthorized</code> and no AI processing happens.</p>
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:12px;font-size:14px;">
+        <strong style="color:#fff;">How it flows:</strong>
+        <div style="color:var(--muted);margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+          <div>1. Engineer enters the API Key in the desktop app — saved to <code>localStorage</code>, never transmitted until a scan is triggered.</div>
+          <div>2. On scan, the app POSTs the photo binary with headers: <code>Content-Type: image/jpeg</code> and <code>x-api-key: &lt;secret&gt;</code>.</div>
+          <div>3. Power Automate checks <code>triggerOutputs()['headers']['x-api-key']</code> equals the expected value.</div>
+          <div>4. Match → AI Builder processes the image. No match → flow returns 401, desktop app shows an error.</div>
+        </div>
+      </div>
+      <p style="color:var(--muted);margin-bottom:4px;"><strong style="color:var(--text);">For admins — setting up the key in Power Automate:</strong></p>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>Add a <strong style="color:var(--text)">Condition</strong> action as the first step after the HTTP trigger</li>
+        <li>Left side: <code>triggerOutputs()['headers']['x-api-key']</code></li>
+        <li>Operator: <em>is equal to</em></li>
+        <li>Right side: your chosen secret (e.g. <code>rack-scanner-k9x2mq</code>)</li>
+        <li><strong style="color:var(--text)">If Yes</strong> → continue to AI Builder steps</li>
+        <li><strong style="color:var(--text)">If No</strong> → add a Response action, status <code>401</code>, body <code>Unauthorized</code></li>
+      </ul>
+      <div class="callout callout-warn" style="margin-top:16px;">
+        <span class="callout-icon">⚠️</span>
+        <p>The API Key is stored in <strong>browser localStorage in plaintext</strong>. Use only on managed, encrypted devices. If the key is compromised, change it in Power Automate and redistribute the new key to engineers.</p>
+      </div>
     </div>
 
   </div>
