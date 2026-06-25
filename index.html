@@ -147,8 +147,6 @@
     <input type="text" id="apiKey" placeholder="https://prod-xx.westus.logic.azure.com/workflows/..." autocomplete="off" spellcheck="false">
     <label style="margin-left:8px;white-space:nowrap">API Key:</label>
     <input type="password" id="flowApiKey" placeholder="x-api-key secret" autocomplete="off" spellcheck="false" style="flex:0 0 160px;font-family:monospace">
-    <label style="margin-left:8px">Engineer:</label>
-    <input type="text" id="engineerName" placeholder="Your name" autocomplete="off" style="flex:0 0 160px">
   </div>
 
   <!-- Import session banner (hidden until JSON loaded) -->
@@ -334,9 +332,7 @@ function clearErrorLog() {
 }
 
 // ── Engineer name ─────────────────────────────
-function getEngineer() {
-  return document.getElementById('engineerName')?.value.trim() || '';
-}
+function getEngineer() { return ''; }
 
 // ── Audit log ─────────────────────────────────
 function pushAudit(action, rack, unit, serial, method) {
@@ -414,11 +410,6 @@ const savedFlowApiKey = localStorage.getItem('rack_scanner_api_key');
 if (savedFlowApiKey) flowApiKeyEl.value = savedFlowApiKey;
 flowApiKeyEl.addEventListener('change', () => localStorage.setItem('rack_scanner_api_key', flowApiKeyEl.value));
 
-// Persist engineer name in localStorage
-const engineerEl = document.getElementById('engineerName');
-const savedEngineer = localStorage.getItem('rack_scanner_engineer');
-if (savedEngineer) engineerEl.value = savedEngineer;
-engineerEl.addEventListener('change', () => localStorage.setItem('rack_scanner_engineer', engineerEl.value));
 
 // Drag & drop
 dropzone.addEventListener('click', () => fileInput.click());
