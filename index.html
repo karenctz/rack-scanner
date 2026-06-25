@@ -118,6 +118,12 @@
   /* Confidence legend */
   .conf-legend { display: flex; align-items: center; gap: 14px; font-size: 11px; color: #64748b; margin: 6px 0 10px; flex-wrap: wrap; }
   .conf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+  /* U-gap panel */
+  #uGapPanel { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  #uGapPanel .ugap-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; user-select: none; }
+  #uGapPanel .ugap-header span { font-size: 13px; font-weight: 600; color: #94a3b8; flex: 1; }
+  #uGapPanel .ugap-body { border-top: 1px solid #2d3148; padding: 10px 16px; font-size: 12px; color: #64748b; display: none; }
+  #uGapPanel .ugap-body.open { display: block; }
 </style>
 </head>
 <body>
@@ -192,6 +198,7 @@
     <span><span class="conf-dot" style="background:#eab308"></span>OCR – review</span>
     <span><span class="conf-dot" style="background:#60a5fa"></span>Direct import</span>
     <span><span class="conf-dot" style="background:#6b7280"></span>Manual entry</span>
+    <span><span class="conf-dot" style="background:#a855f7"></span>AI corrected</span>
   </div>
 
   <!-- Duplicate warning (hidden until dupes exist) -->
@@ -225,6 +232,15 @@
       </div>
     </div>
     <div class="audit-log-body" id="auditLogBody"></div>
+  </div>
+
+  <!-- U-position gap panel -->
+  <div id="uGapPanel" style="display:none">
+    <div class="ugap-header" onclick="document.getElementById('uGapBody').classList.toggle('open')">
+      <span>◎ Undocumented U Positions</span>
+      <span style="font-size:11px;color:#64748b">Click to expand</span>
+    </div>
+    <div class="ugap-body" id="uGapBody"></div>
   </div>
 
   <p class="section-title">Asset Inventory</p>
@@ -433,10 +449,11 @@ function updateScanBtn() {
 // Confidence dot helper
 function confDot(conf) {
   const map = {
-    barcode: { color: '#22c55e', title: 'Barcode confirmed' },
-    ocr:     { color: '#eab308', title: 'OCR – please review' },
-    direct:  { color: '#60a5fa', title: 'Direct import' },
-    manual:  { color: '#6b7280', title: 'Manual entry' },
+    barcode:         { color: '#22c55e', title: 'Barcode confirmed' },
+    ocr:             { color: '#eab308', title: 'OCR – please review' },
+    direct:          { color: '#60a5fa', title: 'Direct import' },
+    manual:          { color: '#6b7280', title: 'Manual entry' },
+    manual_override: { color: '#a855f7', title: 'Manually corrected (AI was wrong)' },
   };
   const { color, title } = map[conf] || map.manual;
   return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0" title="${title}"></span>`;
@@ -493,6 +510,45 @@ function renderTable() {
   exportBtn.disabled = rows.length === 0;
   exportZipBtn.disabled = rows.length === 0;
   renderRackFilter();
+  renderUGaps();
+}
+
+function renderUGaps() {
+  const panel = document.getElementById('uGapPanel');
+  const body  = document.getElementById('uGapBody');
+  // Group occupied U slots by rack
+  const rackMap = {};
+  rows.forEach(r => {
+    if (!r.rack) return;
+    const s = parseInt(r.startU), e = parseInt(r.endU);
+    if (isNaN(s) || isNaN(e)) return;
+    if (!rackMap[r.rack]) rackMap[r.rack] = new Set();
+    for (let u = s; u <= e; u++) rackMap[r.rack].add(u);
+  });
+  const rackIds = Object.keys(rackMap);
+  if (!rackIds.length) { panel.style.display = 'none'; return; }
+
+  const lines = [];
+  rackIds.sort().forEach(rack => {
+    const used = rackMap[rack];
+    const maxU = Math.max(...used);
+    const gaps = [];
+    for (let u = 1; u <= maxU; u++) { if (!used.has(u)) gaps.push(u); }
+    if (!gaps.length) return;
+    // Merge consecutive gaps into ranges
+    const ranges = [];
+    let rs = gaps[0], rp = gaps[0];
+    for (let i = 1; i < gaps.length; i++) {
+      if (gaps[i] === rp + 1) { rp = gaps[i]; }
+      else { ranges.push(rs === rp ? `U${rs}` : `U${rs}–${rp}`); rs = rp = gaps[i]; }
+    }
+    ranges.push(rs === rp ? `U${rs}` : `U${rs}–${rp}`);
+    lines.push(`<div style="margin-bottom:5px"><span style="color:#94a3b8;font-weight:600">${rack}</span> — gaps: ${ranges.join(', ')}</div>`);
+  });
+
+  if (!lines.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  body.innerHTML = lines.join('');
 }
 
 function esc(v) { return (v ?? '').toString().replace(/"/g, '&quot;'); }
@@ -507,7 +563,23 @@ function triggerDownload(url, filename) {
   // If still on page after 800ms, the click was swallowed — open in new tab as fallback
   setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 800);
 }
-function updateRow(i, field, val) { rows[i][field] = val; }
+function updateRow(i, field, val) {
+  const row = rows[i];
+  const oldVal = row[field];
+  row[field] = val;
+  // Track manual corrections of OCR-extracted fields
+  if (row._confidence === 'ocr' && oldVal !== val && val !== ''
+      && (field === 'serialNumber' || field === 'partNumber' || field === 'category' || field === 'manufacturer')) {
+    row._confidence = 'manual_override';
+    auditLog.push({
+      ts: new Date().toISOString(), engineer: getEngineer(), action: 'override',
+      rack: row.rack, unit: row.startU ? `U${row.startU}` : '',
+      serial: row.serialNumber, method: `Corrected ${field} (was: ${oldVal || '—'})`
+    });
+    renderAuditLog();
+    renderTable();
+  }
+}
 function deleteRow(i) { rows.splice(i, 1); renderTable(); }
 function addEmptyRow() {
   rows.push({ rack: '', startU: '', endU: '', category: 'Server', manufacturer: '', partNumber: '', serialNumber: '', notes: '', source: '', _confidence: 'manual', _scannedBy: getEngineer(), _scannedAt: new Date().toISOString() });
@@ -1240,7 +1312,9 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   // Rack/U/category already known from field app — just extract part # and serial # from OCR
   const { base64, mimeType } = await prepareImage(dataUrl);
   const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg', rackId: meta.rack });
-  const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
+  const { serialNumber, partNumber, manufacturer, category: ocrCategory, notes: ocrNotes } = parseOCRText(ocrText);
+  // Use OCR category only if the engineer left it as 'Other' and OCR detected something specific
+  const category = (meta.category === 'Other' && ocrCategory !== 'Other') ? ocrCategory : meta.category;
   const engineer = getEngineer();
   const ts = new Date().toISOString();
   const uStr = meta.startU === meta.endU ? meta.startU : `${meta.startU}-${meta.endU}`;
@@ -1252,6 +1326,7 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     if (!existing.manufacturer && manufacturer) existing.manufacturer = manufacturer;
     if (!existing.partNumber && partNumber) existing.partNumber = partNumber;
     if (!existing.serialNumber && serialNumber) existing.serialNumber = serialNumber;
+    if (existing.category === 'Other' && category !== 'Other') existing.category = category;
     if (ocrNotes && !existing.notes.includes(ocrNotes)) existing.notes = [existing.notes, ocrNotes].filter(Boolean).join('; ');
     pushAudit('merge', meta.rack, uStr, serialNumber, 'ocr');
     return null; // row updated in place
@@ -1262,7 +1337,7 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     rack: meta.rack,
     startU: meta.startU,
     endU: meta.endU,
-    category: meta.category,
+    category,
     manufacturer,
     partNumber,
     serialNumber,

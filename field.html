@@ -179,6 +179,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <div class="topbar">
     <div style="flex:1">
       <div style="font-size:17px;font-weight:700">Rack Field Capture</div>
+      <div id="offline-indicator" style="font-size:11px;color:#22c55e;opacity:0.5;margin-top:1px;transition:opacity 0.4s">💾 Saved offline</div>
     </div>
     <button class="topbar-action" id="delete-all-btn" style="display:none;color:var(--red)">Delete All</button>
     <button class="topbar-action" id="export-all-btn" style="display:none">Export All</button>
@@ -337,7 +338,16 @@ let scannerFallbackTimer = null;
 // ── LocalStorage ──────────────────────────────
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
 function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
-function persist() { save('rack_sessions', sessions); }
+function persist() {
+  save('rack_sessions', sessions);
+  const el = document.getElementById('offline-indicator');
+  if (el) {
+    el.textContent = '💾 Saved offline';
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0.5'; }, 2000);
+  }
+}
 
 // ── Routing ────────────────────────────────────
 function showScreen(id) {
