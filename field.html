@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'none';">
 <title>Rack Field Capture</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -332,6 +333,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <input type="file" accept="image/*" class="hidden-input" id="serial-photo-input">
 
 <script>
+// ── Escape helper (XSS prevention) ────────────
+function esc(v) {
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ── State ──────────────────────────────────────
 let sessions = load('rack_sessions') || [];
 let currentSessionIdx = null;
@@ -382,8 +388,8 @@ function renderHome() {
       <div class="session-card" onclick="openSession(${i})">
         <div style="font-size:28px">🗄️</div>
         <div class="session-card-info">
-          <h3>${s.rackId}</h3>
-          <p>${s.notes||''} · ${itemCount} item${itemCount!==1?'s':''} · ${photoCount} photo${photoCount!==1?'s':''}</p>
+          <h3>${esc(s.rackId)}</h3>
+          <p>${esc(s.notes||'')} · ${itemCount} item${itemCount!==1?'s':''} · ${photoCount} photo${photoCount!==1?'s':''}</p>
           <p style="color:var(--muted);font-size:11px;margin-top:2px">${scannedCount > 0 ? `${scannedCount} barcode${scannedCount!==1?'s':''} scanned · ` : ''}${new Date(s.createdAt).toLocaleString()}</p>
         </div>
         <div class="session-card-chevron">›</div>
@@ -482,8 +488,8 @@ function renderItemCard(item, i) {
       <div class="item-card-header">
         <div class="item-card-u">${uLabel}</div>
         <div class="item-card-info">
-          <h4>${item.category}</h4>
-          <p>${item.notes || (photoCount + ' photo' + (photoCount!==1?'s':''))}</p>
+          <h4>${esc(item.category)}</h4>
+          <p>${esc(item.notes) || (photoCount + ' photo' + (photoCount!==1?'s':''))}</p>
         </div>
         <div>
           <button class="icon-btn" onclick="openItemSheet(${i})">✏️</button>
@@ -491,8 +497,8 @@ function renderItemCard(item, i) {
       </div>
       ${hasSerial || hasPart || item.serialPhoto ? `
       <div class="item-scanned-row">
-        ${hasSerial ? `<span class="scanned-chip">S/N: ${item.serialNumber}</span>` : ''}
-        ${hasPart   ? `<span class="scanned-chip part">P/N: ${item.partNumber}</span>` : ''}
+        ${hasSerial ? `<span class="scanned-chip">S/N: ${esc(item.serialNumber)}</span>` : ''}
+        ${hasPart   ? `<span class="scanned-chip part">P/N: ${esc(item.partNumber)}</span>` : ''}
         ${!hasSerial && item.serialPhoto ? `<span class="scanned-chip" style="background:#2a2010;color:var(--yellow)">📷 S/N photo – OCR at desktop</span>` : ''}
       </div>` : ''}
       ${photoCount ? `
@@ -886,6 +892,8 @@ async function openScanner(target) {
   if (!window.ZXing) {
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
+    script.integrity = 'sha384-DOP3OlIzNeWpufSZMxZihUYSqCAZFirsVmSAVg8ItvU9ac1FcQF6ZHjQ9CbCznNS';
+    script.crossOrigin = 'anonymous';
     script.onload = () => startZXing();
     script.onerror = () => { status.textContent = 'Failed to load scanner. Type serial manually.'; };
     document.head.appendChild(script);
