@@ -26,7 +26,15 @@
   .upload-zone p strong { color: #94a3b8; }
   .previews { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
   .preview-item { position: relative; width: 120px; }
-  .preview-item img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #2d3148; }
+  .preview-item img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #2d3148; cursor: zoom-in; transition: opacity 0.15s; }
+  .preview-item img:hover { opacity: 0.85; }
+  /* Lightbox */
+  #lightbox { position: fixed; inset: 0; background: #000000e0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px; }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 48px #000; }
+  #lightbox-close { position: fixed; top: 16px; right: 20px; background: none; border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1; opacity: 0.8; }
+  #lightbox-close:hover { opacity: 1; }
+  #lightbox-label { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: #ffffffaa; font-size: 13px; white-space: nowrap; }
   .preview-item button { position: absolute; top: 4px; right: 4px; background: #ef4444; border: none; color: white; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center; }
   .preview-item .status { font-size: 10px; color: #64748b; text-align: center; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .preview-item .status.processing { color: #f59e0b; }
@@ -425,7 +433,7 @@ function renderPreviews() {
     const div = document.createElement('div');
     div.className = 'preview-item';
     div.innerHTML = `
-      <img src="${img.dataUrl}" alt="">
+      <img src="${img.dataUrl}" alt="" onclick="openLightbox('${img.dataUrl.replace(/'/g, "\\'")}', '${(name).replace(/'/g, "\\'")}')">
       ${img.status === 'ready' && !img.label ? `<button onclick="removeImage(${i})">×</button>` : ''}
       <div class="status ${img.status === 'processing' ? 'processing' : img.status === 'done' ? 'done' : img.status === 'error' ? 'error' : ''}">
         ${img.status === 'ready' ? name : img.status === 'processing' ? '⏳ Scanning...' : img.status === 'done' ? '✓ Done' : '✗ Error'}
@@ -1361,9 +1369,27 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.remove(), ttl);
 }
 
+// ── Lightbox ──────────────────────────────────
+function openLightbox(src, label) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-label').textContent = label || '';
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+document.getElementById('lightbox').addEventListener('click', e => { if (e.target === e.currentTarget) closeLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
 // Init
 renderTable();
 </script>
 <div id="toast-stack"></div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-label"></div>
+</div>
 </body>
 </html>
