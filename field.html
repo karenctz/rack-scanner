@@ -197,18 +197,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <div class="topbar">
     <button class="topbar-back" id="rack-back">‹</button>
     <h2 id="rack-title">Rack —</h2>
-    <button class="topbar-action" id="rack-export-btn">Export</button>
   </div>
   <div class="body" id="rack-body"></div>
-</div>
-
-<!-- SCREEN: EXPORT -->
-<div class="screen" id="screen-export">
-  <div class="topbar">
-    <button class="topbar-back" id="export-back">‹</button>
-    <h2>Export Rack</h2>
-  </div>
-  <div class="body no-pad-bottom" id="export-body"></div>
 </div>
 
 <!-- SHEET: NEW SESSION -->
@@ -456,7 +446,8 @@ function renderRackScreen() {
     <button class="add-item-btn" onclick="openItemSheet(null)">
       <span style="font-size:22px">+</span> Add Equipment Item
     </button>
-    <button class="btn-full btn-primary" style="margin-top:16px" onclick="saveAndExitRack()">Save &amp; Exit</button>`;
+    <button class="btn-full btn-primary" style="margin-top:16px" onclick="saveAndExitRack()">Save &amp; Exit</button>
+    <button class="btn-full btn-danger" style="margin-top:10px;margin-bottom:24px" onclick="deleteCurrentRack()">Delete Rack</button>`;
 }
 
 function renderItemCard(item, i) {
@@ -718,41 +709,7 @@ document.getElementById('viewer-del').addEventListener('click', () => {
   document.getElementById('photo-viewer').classList.remove('open');
 });
 
-// ── Export screen ─────────────────────────────
-document.getElementById('rack-export-btn').addEventListener('click', showExport);
-document.getElementById('export-back').addEventListener('click', () => showScreen('screen-rack'));
-
-function showExport() {
-  const s = sessions[currentSessionIdx];
-  const totalPhotos = (s.frontPhotos?.length||0) + (s.backPhotos?.length||0) + s.items.reduce((n,it)=>n+(it.photos?.length||0),0);
-  const scannedCount = s.items.filter(it => it.serialNumber).length;
-  document.getElementById('export-body').innerHTML = `
-    <div class="export-info">
-      <h3>${s.rackId}</h3>
-      <p>${s.notes||'No location notes'} · ${new Date(s.createdAt).toLocaleString()}</p>
-    </div>
-    <div class="stat-row">
-      <div class="stat"><h4>${s.items.length}</h4><p>Items</p></div>
-      <div class="stat"><h4>${scannedCount}</h4><p>Barcodes</p></div>
-      <div class="stat"><h4>${totalPhotos}</h4><p>Photos</p></div>
-    </div>
-    <div class="section-label" style="margin-bottom:10px">Items</div>
-    ${s.items.map(item => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${item.serialNumber||item.partNumber?'8px':'0'}">
-          <div style="background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;font-family:monospace">U${item.startU}${item.startU!==item.endU?'–'+item.endU:''}</div>
-          <div style="flex:1"><div style="font-size:14px;font-weight:600">${item.category}</div><div style="font-size:12px;color:var(--muted)">${item.photos?.length||0} photo${(item.photos?.length||0)!==1?'s':''}</div></div>
-        </div>
-        ${item.serialNumber ? `<div style="font-size:12px;font-family:monospace;color:#86efac">S/N: ${item.serialNumber}</div>` : ''}
-        ${item.partNumber   ? `<div style="font-size:12px;font-family:monospace;color:#a3e635">P/N: ${item.partNumber}</div>` : ''}
-      </div>`).join('')}
-    <div style="height:16px"></div>
-    <button class="btn-full btn-primary" onclick="exportJSON()" style="margin-bottom:10px">Download Rack JSON</button>
-    <button class="btn-full btn-danger" onclick="deleteSession()" style="margin-bottom:20px">Delete Rack</button>
-    <p style="font-size:12px;color:var(--muted);text-align:center;padding-bottom:20px">Import this JSON in the desktop scanner. Items with barcodes scanned won't need AI Builder to read them.</p>`;
-  showScreen('screen-export');
-}
-
+// ── Export ────────────────────────────────────
 function triggerDownload(url, filename) {
   const a = document.createElement('a');
   a.href = url; a.download = filename;
@@ -762,24 +719,38 @@ function triggerDownload(url, filename) {
   setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 800);
 }
 
-function exportJSON() {
-  const s = sessions[currentSessionIdx];
-  const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
-  triggerDownload(URL.createObjectURL(blob), `rack-${s.rackId}-${Date.now()}.json`);
-  toast('Downloaded!');
-}
-
-function exportAllJSON() {
+async function exportAllJSON() {
   if (!sessions.length) return;
-  const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' });
-  triggerDownload(URL.createObjectURL(blob), `all-racks-${Date.now()}.json`);
-  toast(`Exported ${sessions.length} rack${sessions.length !== 1 ? 's' : ''}`);
+  const filename = `rack-survey-${Date.now()}.json`;
+  const json = JSON.stringify(sessions, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+
+  // Try native share sheet (Android/iOS) — lets engineers pick Gmail, email, Drive, etc.
+  if (navigator.canShare) {
+    const file = new File([blob], filename, { type: 'application/json' });
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Rack Survey Data',
+          text: `Rack survey export — ${sessions.length} rack${sessions.length !== 1 ? 's' : ''}`
+        });
+        return;
+      } catch(e) {
+        if (e.name === 'AbortError') return; // user cancelled — don't fall through to download
+      }
+    }
+  }
+
+  // Fallback: plain download
+  triggerDownload(URL.createObjectURL(blob), filename);
+  toast(`Downloaded ${sessions.length} rack${sessions.length !== 1 ? 's' : ''}`);
 }
 
 document.getElementById('export-all-btn').addEventListener('click', exportAllJSON);
 
-function deleteSession() {
-  if (!confirm(`Delete rack "${sessions[currentSessionIdx].rackId}"?`)) return;
+function deleteCurrentRack() {
+  if (!confirm(`Delete rack "${sessions[currentSessionIdx].rackId}"? This cannot be undone.`)) return;
   sessions.splice(currentSessionIdx, 1);
   persist(); renderHome(); showScreen('screen-home');
 }
