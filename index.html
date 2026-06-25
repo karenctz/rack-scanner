@@ -46,8 +46,8 @@
   .btn-primary:hover { background: #3b5ef0; }
   .btn-primary:disabled { background: #2d3148; color: #4a5568; cursor: not-allowed; }
   @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 0 0 #4f6ef760; } 50% { box-shadow: 0 0 0 8px #4f6ef720; } }
-  #scanBtn.ready { font-size: 15px; padding: 12px 28px; animation: pulse-glow 2s ease-in-out infinite; box-shadow: 0 0 0 0 #4f6ef760; }
-  #scanBtn.ready svg { width: 18px; height: 18px; }
+  #scanBtn.ready, #scanAllBtn.ready { font-size: 15px; padding: 12px 28px; animation: pulse-glow 2s ease-in-out infinite; box-shadow: 0 0 0 0 #4f6ef760; }
+  #scanBtn.ready svg, #scanAllBtn.ready svg { width: 18px; height: 18px; }
   .btn-secondary { background: #1a1d2e; color: #94a3b8; border: 1px solid #2d3148; }
   .btn-secondary:hover { background: #2d3148; }
   .btn-success { background: #16a34a; color: white; }
@@ -156,8 +156,8 @@
   <div id="importBanner" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <p class="section-title" style="margin-bottom:0">Imported Sessions</p>
-      <button class="btn btn-primary" id="scanAllBtn" style="display:none;padding:6px 14px;font-size:12px" onclick="scanAll()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <button class="btn btn-primary" id="scanAllBtn" style="display:none" onclick="scanAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Scan All
       </button>
     </div>
@@ -1129,7 +1129,9 @@ function renderImportBanner() {
   banner.style.display = 'block';
   const pending = importedSessions.filter(e => (e.scannedCount || 0) < e.session.items.length);
   const scanAllBtn = document.getElementById('scanAllBtn');
-  scanAllBtn.style.display = importedSessions.length > 1 && pending.length > 0 ? 'flex' : 'none';
+  const showScanAll = importedSessions.length > 1 && pending.length > 0;
+  scanAllBtn.style.display = showScanAll ? 'flex' : 'none';
+  scanAllBtn.classList.toggle('ready', showScanAll);
 
   list.innerHTML = importedSessions.map((entry, si) => {
     const s = entry.session;
