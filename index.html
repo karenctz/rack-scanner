@@ -99,6 +99,25 @@
   .error-log-time { color: #64748b; white-space: nowrap; flex-shrink: 0; }
   .error-log-label { color: #f87171; flex-shrink: 0; }
   .error-log-msg { color: #fca5a5; word-break: break-all; }
+  /* Audit log panel */
+  .audit-log-panel { background: #0f1a1a; border: 1px solid #1a3a3a; border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .audit-log-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; user-select: none; }
+  .audit-log-header span { font-size: 13px; font-weight: 600; color: #a5f3fc; flex: 1; }
+  .audit-log-header .count-badge { background: #0891b2; color: white; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+  .audit-log-header .log-actions { display: flex; gap: 6px; }
+  .audit-log-body { border-top: 1px solid #1a3a3a; max-height: 220px; overflow-y: auto; padding: 10px 16px; font-family: monospace; font-size: 12px; color: #a5f3fc; display: none; }
+  .audit-log-body.open { display: block; }
+  .audit-log-entry { padding: 4px 0; border-bottom: 1px solid #0f2a2a; display: flex; gap: 10px; }
+  .audit-log-entry:last-child { border-bottom: none; }
+  .audit-log-time { color: #64748b; white-space: nowrap; flex-shrink: 0; }
+  .audit-log-engineer { color: #67e8f9; flex-shrink: 0; }
+  .audit-log-detail { color: #a5f3fc; word-break: break-all; }
+  /* Dup warning */
+  #dupWarning { background: #422006; border: 1px solid #92400e; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #fde68a; }
+  #dupWarning .dup-close { background: transparent; border: none; color: #fde68a; cursor: pointer; font-size: 16px; margin-left: auto; line-height: 1; }
+  /* Confidence legend */
+  .conf-legend { display: flex; align-items: center; gap: 14px; font-size: 11px; color: #64748b; margin: 6px 0 10px; flex-wrap: wrap; }
+  .conf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -112,6 +131,8 @@
   <div class="api-bar">
     <label>Power Automate Flow URL</label>
     <input type="text" id="apiKey" placeholder="https://prod-xx.westus.logic.azure.com/workflows/..." autocomplete="off" spellcheck="false">
+    <label style="margin-left:8px">Engineer:</label>
+    <input type="text" id="engineerName" placeholder="Your name" autocomplete="off" style="flex:0 0 160px">
   </div>
 
   <!-- Import session banner (hidden until JSON loaded) -->
@@ -165,6 +186,19 @@
     <span style="font-size:13px;font-weight:600;color:#374151;">Export racks:</span>
     <div id="rackFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
   </div>
+  <!-- Confidence legend -->
+  <div class="conf-legend">
+    <span><span class="conf-dot" style="background:#22c55e"></span>Barcode</span>
+    <span><span class="conf-dot" style="background:#eab308"></span>OCR – review</span>
+    <span><span class="conf-dot" style="background:#60a5fa"></span>Direct import</span>
+    <span><span class="conf-dot" style="background:#6b7280"></span>Manual entry</span>
+  </div>
+
+  <!-- Duplicate warning (hidden until dupes exist) -->
+  <div id="dupWarning" style="display:none">
+    <span id="dupWarningText"></span>
+    <button class="dup-close" onclick="document.getElementById('dupWarning').style.display='none'">✕</button>
+  </div>
 
   <!-- Error log panel (hidden until there are errors) -->
   <div class="error-log-panel" id="errorLogPanel" style="display:none">
@@ -180,11 +214,25 @@
     <div class="error-log-body open" id="errorLogBody"></div>
   </div>
 
+  <!-- Audit log panel -->
+  <div class="audit-log-panel" id="auditLogPanel" style="display:none">
+    <div class="audit-log-header" onclick="toggleAuditLog()">
+      <span>📋 Audit Log</span>
+      <span class="count-badge" id="auditCountBadge">0</span>
+      <div class="log-actions" onclick="event.stopPropagation()">
+        <button class="btn-xs blue" onclick="downloadAuditCsv()">Download CSV</button>
+        <button class="btn-xs red" onclick="clearAuditLog()">Clear</button>
+      </div>
+    </div>
+    <div class="audit-log-body" id="auditLogBody"></div>
+  </div>
+
   <p class="section-title">Asset Inventory</p>
   <div class="table-wrap" id="tableWrap">
     <table id="assetTable">
       <thead>
         <tr>
+          <th style="width:18px"></th>
           <th style="width:90px">Rack #</th>
           <th style="width:70px">Start U</th>
           <th style="width:70px">End U</th>
@@ -198,7 +246,7 @@
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr class="add-row-row"><td colspan="9"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td></tr>
+        <tr class="add-row-row"><td colspan="11"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td></tr>
       </tbody>
     </table>
   </div>
@@ -209,6 +257,7 @@ const CATEGORIES = ['Server', 'Network Switch', 'UPS', 'Storage', 'PDU', 'KVM', 
 
 let rows = [];
 let errorLog = [];
+let auditLog = [];
 
 function logError(label, message) {
   const ts = new Date().toLocaleTimeString();
@@ -250,6 +299,60 @@ function downloadErrorLog() {
 function clearErrorLog() {
   errorLog = []; renderErrorLog();
 }
+
+// ── Engineer name ─────────────────────────────
+function getEngineer() {
+  return document.getElementById('engineerName')?.value.trim() || '';
+}
+
+// ── Audit log ─────────────────────────────────
+function pushAudit(action, rack, unit, serial, method) {
+  auditLog.push({
+    ts: new Date().toISOString(),
+    engineer: getEngineer(),
+    action,
+    rack: rack || '',
+    unit: unit || '',
+    serial: serial || '',
+    method: method || ''
+  });
+  renderAuditLog();
+}
+
+function renderAuditLog() {
+  const panel = document.getElementById('auditLogPanel');
+  const body  = document.getElementById('auditLogBody');
+  const badge = document.getElementById('auditCountBadge');
+  if (!auditLog.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  badge.textContent = auditLog.length;
+  body.innerHTML = auditLog.map(e => `
+    <div class="audit-log-entry">
+      <span class="audit-log-time">${esc(e.ts.replace('T',' ').slice(0,19))}</span>
+      <span class="audit-log-engineer">${esc(e.engineer || '—')}</span>
+      <span class="audit-log-detail">${esc(e.rack)}${e.unit?' U'+esc(e.unit):''} | ${esc(e.serial||'—')} | ${esc(e.method)}</span>
+    </div>`).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function toggleAuditLog() {
+  document.getElementById('auditLogBody').classList.toggle('open');
+}
+
+function clearAuditLog() {
+  auditLog = []; renderAuditLog();
+}
+
+function downloadAuditCsv() {
+  const header = 'Timestamp,Engineer,Rack,Unit,Serial Number,Method\n';
+  const rows_ = auditLog.map(e =>
+    [e.ts, e.engineer, e.rack, e.unit, e.serial, e.method]
+      .map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+  const blob = new Blob([header + rows_], { type: 'text/csv' });
+  triggerDownload(URL.createObjectURL(blob), `rack-audit-${new Date().toISOString().slice(0,10)}.csv`);
+}
+
 let images = []; // {file, dataUrl, status}
 let scanning = false;
 
@@ -271,6 +374,12 @@ const scanIcon = document.getElementById('scanIcon');
 const savedKey = sessionStorage.getItem('rack_scanner_flow_url');
 if (savedKey) apiKeyEl.value = savedKey;
 apiKeyEl.addEventListener('change', () => sessionStorage.setItem('rack_scanner_flow_url', apiKeyEl.value));
+
+// Persist engineer name in localStorage
+const engineerEl = document.getElementById('engineerName');
+const savedEngineer = localStorage.getItem('rack_scanner_engineer');
+if (savedEngineer) engineerEl.value = savedEngineer;
+engineerEl.addEventListener('change', () => localStorage.setItem('rack_scanner_engineer', engineerEl.value));
 
 // Drag & drop
 dropzone.addEventListener('click', () => fileInput.click());
@@ -321,13 +430,44 @@ function updateScanBtn() {
   scanBtn.disabled = !hasImages || scanning;
 }
 
+// Confidence dot helper
+function confDot(conf) {
+  const map = {
+    barcode: { color: '#22c55e', title: 'Barcode confirmed' },
+    ocr:     { color: '#eab308', title: 'OCR – please review' },
+    direct:  { color: '#60a5fa', title: 'Direct import' },
+    manual:  { color: '#6b7280', title: 'Manual entry' },
+  };
+  const { color, title } = map[conf] || map.manual;
+  return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0" title="${title}"></span>`;
+}
+
 // Table rendering
 function renderTable() {
-  const addRow = tableBody.querySelector('.add-row-row');
+  // Duplicate detection
+  const snCounts = {};
+  rows.forEach(r => { if (r.serialNumber) snCounts[r.serialNumber] = (snCounts[r.serialNumber] || 0) + 1; });
+  const dupSNs = new Set(Object.keys(snCounts).filter(sn => snCounts[sn] > 1));
+
+  // Dup warning
+  const dupWarn = document.getElementById('dupWarning');
+  const dupText = document.getElementById('dupWarningText');
+  if (dupSNs.size > 0) {
+    dupText.textContent = `⚠ ${dupSNs.size} duplicate serial number(s) — review highlighted rows.`;
+    dupWarn.style.display = 'flex';
+  } else {
+    dupWarn.style.display = 'none';
+  }
+
   tableBody.innerHTML = '';
   rows.forEach((row, i) => {
+    const isDup = row.serialNumber && dupSNs.has(row.serialNumber);
+    const snStyle = isDup
+      ? 'font-family:monospace;border-color:#f97316;background:#431407'
+      : 'font-family:monospace';
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="text-align:center;padding:0 4px">${confDot(row._confidence)}</td>
       <td><input value="${esc(row.rack)}" onchange="updateRow(${i},'rack',this.value)" placeholder="R01"></td>
       <td><input type="number" value="${esc(row.startU)}" onchange="updateRow(${i},'startU',this.value)" placeholder="1" min="1" max="48"></td>
       <td><input type="number" value="${esc(row.endU)}" onchange="updateRow(${i},'endU',this.value)" placeholder="2" min="1" max="48"></td>
@@ -338,7 +478,7 @@ function renderTable() {
       </td>
       <td><input value="${esc(row.manufacturer)}" onchange="updateRow(${i},'manufacturer',this.value)" placeholder="e.g. HPE"></td>
       <td><input value="${esc(row.partNumber)}" onchange="updateRow(${i},'partNumber',this.value)" placeholder="e.g. 867960-B21"></td>
-      <td><input value="${esc(row.serialNumber)}" onchange="updateRow(${i},'serialNumber',this.value)" placeholder="e.g. CZJ1234567" style="font-family:monospace"></td>
+      <td><input value="${esc(row.serialNumber)}" onchange="updateRow(${i},'serialNumber',this.value)" placeholder="e.g. CZJ1234567" style="${snStyle}"></td>
       <td><input value="${esc(row.notes)}" onchange="updateRow(${i},'notes',this.value)" placeholder=""></td>
       <td>${row.source ? `<span class="source-badge">${esc(row.source)}</span>` : ''}</td>
       <td><button class="del-row" onclick="deleteRow(${i})">✕</button></td>
@@ -347,7 +487,7 @@ function renderTable() {
   });
   const newAddRow = document.createElement('tr');
   newAddRow.className = 'add-row-row';
-  newAddRow.innerHTML = '<td colspan="10"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
+  newAddRow.innerHTML = '<td colspan="11"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
   newAddRow.querySelector('button').addEventListener('click', addEmptyRow);
   tableBody.appendChild(newAddRow);
   exportBtn.disabled = rows.length === 0;
@@ -370,7 +510,7 @@ function triggerDownload(url, filename) {
 function updateRow(i, field, val) { rows[i][field] = val; }
 function deleteRow(i) { rows.splice(i, 1); renderTable(); }
 function addEmptyRow() {
-  rows.push({ rack: '', startU: '', endU: '', category: 'Server', manufacturer: '', partNumber: '', serialNumber: '', notes: '', source: '' });
+  rows.push({ rack: '', startU: '', endU: '', category: 'Server', manufacturer: '', partNumber: '', serialNumber: '', notes: '', source: '', _confidence: 'manual', _scannedBy: getEngineer(), _scannedAt: new Date().toISOString() });
   renderTable();
   // focus first cell of new row
   const trs = tableBody.querySelectorAll('tr:not(.add-row-row)');
@@ -639,11 +779,15 @@ async function callAIBuilder(flowUrl, dataUrl) {
   const { base64, mimeType } = await prepareImage(dataUrl);
   const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg' });
   const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
+  const engineer = getEngineer();
+  const ts = new Date().toISOString();
+  pushAudit('scan', '', '', serialNumber, 'ocr');
   // Raw photo upload — rack/U unknown, user fills in
   return [{
     rack: '', startU: '', endU: '',
     category, manufacturer, partNumber, serialNumber, notes,
-    source: ''
+    source: '',
+    _confidence: 'ocr', _scannedBy: engineer, _scannedAt: ts
   }];
 }
 
@@ -694,9 +838,23 @@ function filteredRows() {
   return rows.filter(r => selectedRacks.has(r.rack));
 }
 
+// ── Validation ────────────────────────────────
+function validateBeforeExport() {
+  const missing = [];
+  rows.forEach((r, i) => {
+    const problems = [];
+    if (!r.rack) problems.push('Rack #');
+    if (!r.serialNumber) problems.push('Serial Number');
+    if (problems.length) missing.push(`Row ${i + 1}: missing ${problems.join(', ')}`);
+  });
+  if (!missing.length) return true;
+  return confirm(`Some rows have missing data:\n${missing.join('\n')}\n\nExport anyway?`);
+}
+
 // Export
 exportBtn.addEventListener('click', () => {
   if (!rows.length) return;
+  if (!validateBeforeExport()) return;
   const exportData = filteredRows();
   if (!exportData.length) { toast('No rows match the selected racks', 'error'); return; }
   const wsData = [
@@ -717,6 +875,17 @@ exportBtn.addEventListener('click', () => {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Assets');
+
+  // Audit sheet
+  if (auditLog.length) {
+    const auditWsData = [
+      ['Timestamp', 'Engineer', 'Rack', 'Unit', 'Serial Number', 'Method'],
+      ...auditLog.map(e => [e.ts, e.engineer, e.rack, e.unit, e.serial, e.method])
+    ];
+    const auditWs = XLSX.utils.aoa_to_sheet(auditWsData);
+    auditWs['!cols'] = [22, 18, 10, 10, 22, 12].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, auditWs, 'Audit Log');
+  }
 
   const date = new Date().toISOString().slice(0, 10);
   const xlsxArr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -745,6 +914,15 @@ function buildExcelBlob() {
   }
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Assets');
+  if (auditLog.length) {
+    const auditWsData = [
+      ['Timestamp', 'Engineer', 'Rack', 'Unit', 'Serial Number', 'Method'],
+      ...auditLog.map(e => [e.ts, e.engineer, e.rack, e.unit, e.serial, e.method])
+    ];
+    const auditWs = XLSX.utils.aoa_to_sheet(auditWsData);
+    auditWs['!cols'] = [22, 18, 10, 10, 22, 12].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, auditWs, 'Audit Log');
+  }
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 }
 
@@ -786,6 +964,7 @@ function collectAllPhotos() {
 
 exportZipBtn.addEventListener('click', async () => {
   if (!rows.length) return;
+  if (!validateBeforeExport()) return;
   exportZipBtn.disabled = true;
   exportZipBtn.textContent = 'Building ZIP…';
 
@@ -893,10 +1072,14 @@ function importSessionDirect(si) {
   const s = entry.session;
   let added = 0;
 
+  const engineer = getEngineer();
+  const ts = new Date().toISOString();
   s.items.forEach(item => {
     const existingIdx = rows.findIndex(r =>
       r.rack === s.rackId && r.startU === String(item.startU) && r.endU === String(item.endU)
     );
+    const conf = item.serialNumber ? 'barcode' : 'direct';
+    const uStr = String(item.startU) === String(item.endU) ? String(item.startU) : `${item.startU}-${item.endU}`;
     const row = {
       rack: s.rackId,
       startU: String(item.startU),
@@ -906,7 +1089,8 @@ function importSessionDirect(si) {
       partNumber: item.partNumber || '',
       serialNumber: item.serialNumber || '',
       notes: item.notes || '',
-      source: s.rackId
+      source: s.rackId,
+      _confidence: conf, _scannedBy: engineer, _scannedAt: ts
     };
     if (existingIdx >= 0) {
       // Merge — only fill blanks
@@ -914,9 +1098,11 @@ function importSessionDirect(si) {
       if (!ex.serialNumber && row.serialNumber) ex.serialNumber = row.serialNumber;
       if (!ex.partNumber   && row.partNumber)   ex.partNumber   = row.partNumber;
       if (!ex.manufacturer && row.manufacturer) ex.manufacturer = row.manufacturer;
+      pushAudit('merge', s.rackId, uStr, row.serialNumber, conf);
     } else {
       rows.push(row);
       added++;
+      pushAudit('import', s.rackId, uStr, row.serialNumber, conf);
     }
   });
 
@@ -1055,6 +1241,9 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   const { base64, mimeType } = await prepareImage(dataUrl);
   const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg', rackId: meta.rack });
   const { serialNumber, partNumber, manufacturer, notes: ocrNotes } = parseOCRText(ocrText);
+  const engineer = getEngineer();
+  const ts = new Date().toISOString();
+  const uStr = meta.startU === meta.endU ? meta.startU : `${meta.startU}-${meta.endU}`;
 
   // Deduplicate multi-photo items: if same rack+U already in rows, merge and return null
   const existingIdx = rows.findIndex(r => r.rack === meta.rack && r.startU === meta.startU && r.endU === meta.endU);
@@ -1064,9 +1253,11 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     if (!existing.partNumber && partNumber) existing.partNumber = partNumber;
     if (!existing.serialNumber && serialNumber) existing.serialNumber = serialNumber;
     if (ocrNotes && !existing.notes.includes(ocrNotes)) existing.notes = [existing.notes, ocrNotes].filter(Boolean).join('; ');
+    pushAudit('merge', meta.rack, uStr, serialNumber, 'ocr');
     return null; // row updated in place
   }
 
+  pushAudit('scan', meta.rack, uStr, serialNumber, 'ocr');
   return {
     rack: meta.rack,
     startU: meta.startU,
@@ -1076,7 +1267,8 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     partNumber,
     serialNumber,
     notes: [meta.notes, ocrNotes].filter(Boolean).join('; '),
-    source: meta.rack
+    source: meta.rack,
+    _confidence: 'ocr', _scannedBy: engineer, _scannedAt: ts
   };
 }
 
