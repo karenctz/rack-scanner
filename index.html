@@ -45,6 +45,9 @@
   .btn-primary { background: #4f6ef7; color: white; }
   .btn-primary:hover { background: #3b5ef0; }
   .btn-primary:disabled { background: #2d3148; color: #4a5568; cursor: not-allowed; }
+  @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 0 0 #4f6ef760; } 50% { box-shadow: 0 0 0 8px #4f6ef720; } }
+  #scanBtn.ready { font-size: 15px; padding: 12px 28px; animation: pulse-glow 2s ease-in-out infinite; box-shadow: 0 0 0 0 #4f6ef760; }
+  #scanBtn.ready svg { width: 18px; height: 18px; }
   .btn-secondary { background: #1a1d2e; color: #94a3b8; border: 1px solid #2d3148; }
   .btn-secondary:hover { background: #2d3148; }
   .btn-success { background: #16a34a; color: white; }
@@ -458,6 +461,7 @@ function removeImage(i) {
 function updateScanBtn() {
   const hasImages = images.some(img => img.status === 'ready');
   scanBtn.disabled = !hasImages || scanning;
+  scanBtn.classList.toggle('ready', hasImages && !scanning);
 }
 
 // Confidence dot helper
