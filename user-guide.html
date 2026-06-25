@@ -310,6 +310,7 @@
       <li><a href="#desktop-app">Desktop Scanner — OCR Processing &amp; Excel Export</a></li>
       <li><a href="#rack-diagram">Rack Diagram Visualiser — Front &amp; Rear Views</a></li>
       <li><a href="#tips">Tips &amp; Troubleshooting</a></li>
+      <li><a href="#how-it-works">How It Works — Logic &amp; Design</a></li>
     </ol>
   </div>
 </div>
@@ -822,6 +823,135 @@
         </tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
+<div class="section-sep">
+  <div class="section-sep-inner"><span>⚙️</span> How It Works — Logic &amp; Design</div>
+</div>
+
+<div class="page" id="how-it-works">
+  <div class="section-header">
+    <div class="section-icon icon-purple">⚙️</div>
+    <div>
+      <h2>How It Works</h2>
+      <p>The logic and design decisions behind the app</p>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px;">
+
+    <!-- Data flow -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">📦 Data flow between the three apps</h3>
+      <p style="color:var(--muted);margin-bottom:14px;">The three tools are deliberately separate so that field work and office processing are decoupled — engineers don't need internet on site, and the desktop processing doesn't need the phone nearby.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;">
+          <strong style="color:#fff;">1. Field App → JSON file</strong>
+          <p style="color:var(--muted);margin-top:4px;">Everything captured on-site (rack metadata, U positions, serial numbers scanned by barcode, part numbers, photos) is stored in the phone's <strong style="color:var(--text)">browser localStorage</strong>. When you export, it serialises all sessions into a single <code>.json</code> file. Photos are embedded as base64 strings inside the JSON so the file is entirely self-contained — no separate attachment needed.</p>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;">
+          <strong style="color:#fff;">2. Desktop Scanner → Excel file</strong>
+          <p style="color:var(--muted);margin-top:4px;">The desktop app reads the JSON and splits items into two groups: those that already have serial numbers (barcode-scanned or manually typed) are <strong style="color:var(--text)">imported directly</strong> without touching the AI. Items that have photos but no serial number are <strong style="color:var(--text)">queued for OCR</strong>. This avoids unnecessary API calls and keeps costs down.</p>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;">
+          <strong style="color:#fff;">3. Excel → Rack Diagram</strong>
+          <p style="color:var(--muted);margin-top:4px;">The rack diagram reads the exported <code>.xlsx</code> directly in the browser using SheetJS — no server upload required. It groups rows by Rack # and maps each item's Start U / End U to a pixel position in the SVG diagram.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI OCR logic -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">🤖 How AI OCR works</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">When you click <strong style="color:var(--text)">Scan with AI Builder</strong>, each photo is sent as raw binary to a <strong style="color:var(--text)">Microsoft Power Automate flow</strong>. The flow passes the image to <strong style="color:var(--text)">AI Builder Text Recognizer</strong>, which reads every character printed on the label and returns the full extracted text.</p>
+      <p style="color:var(--muted);margin-bottom:12px;">The desktop app then parses that raw text using pattern matching to pull out:</p>
+      <ul style="color:var(--muted);margin-left:20px;margin-bottom:12px;">
+        <li><strong style="color:var(--text)">Serial Number</strong> — looks for patterns like <code>S/N:</code>, <code>SN:</code>, <code>Serial:</code> followed by an alphanumeric string</li>
+        <li><strong style="color:var(--text)">Part Number</strong> — looks for <code>P/N:</code>, <code>PN:</code>, <code>Part No:</code> patterns</li>
+        <li><strong style="color:var(--text)">Manufacturer</strong> — matched against a known list (HP, Dell, Cisco, etc.)</li>
+        <li><strong style="color:var(--text)">Category</strong> — inferred from keywords in the OCR text (e.g. "Switch" → Network Switch, "UPS" → UPS)</li>
+      </ul>
+      <p style="color:var(--muted);">Photos are resized to a maximum of 1600px before sending and EXIF orientation is corrected automatically — so portrait phone photos arrive at the AI in the right orientation regardless of how you held the camera.</p>
+    </div>
+
+    <!-- Confidence logic -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">🎯 Confidence indicator logic</h3>
+      <p style="color:var(--muted);margin-bottom:14px;">Every row is assigned a confidence level based on how its data was captured. This helps you know which rows need a human check before exporting.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:4px;"></div>
+          <div><strong style="color:#fff;">Barcode</strong><p style="color:var(--muted);font-size:14px;">Serial or part number was read by the camera's BarcodeDetector API. The raw value comes directly from the barcode — no interpretation, no guessing. Highest reliability.</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#60a5fa;flex-shrink:0;margin-top:4px;"></div>
+          <div><strong style="color:#fff;">Direct import</strong><p style="color:var(--muted);font-size:14px;">All fields were typed manually in the field app and imported as-is — no AI involved. Reliable if the engineer entered the data correctly.</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#eab308;flex-shrink:0;margin-top:4px;"></div>
+          <div><strong style="color:#fff;">OCR – review</strong><p style="color:var(--muted);font-size:14px;">Data was extracted from a photo by AI Builder. The AI is accurate but not perfect — blurry photos, unusual label formats, or similar characters (0/O, 1/I) can cause mistakes. Always spot-check yellow rows.</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#6b7280;flex-shrink:0;margin-top:4px;"></div>
+          <div><strong style="color:#fff;">Manual entry</strong><p style="color:var(--muted);font-size:14px;">A field was typed directly into the desktop table. No AI or scanner involved.</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#a855f7;flex-shrink:0;margin-top:4px;"></div>
+          <div><strong style="color:#fff;">AI corrected</strong><p style="color:var(--muted);font-size:14px;">An OCR result was edited manually after the fact. The original AI value is logged in the audit trail so you can always see what the AI read vs. what was corrected.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode detection logic -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">📷 How barcode scanning works</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">The field app uses the browser's built-in <strong style="color:var(--text)">BarcodeDetector API</strong> (available on Android Chrome) — no external library or internet connection needed. The camera feed is sampled every 150ms and each frame is passed to the detector. When a barcode is found, the camera stops immediately and the value is filled into the field that triggered the scan (serial number or part number).</p>
+      <p style="color:var(--muted);margin-bottom:12px;">Supported barcode formats: <code>Code 128</code>, <code>Code 39</code>, <code>QR Code</code>, <code>Data Matrix</code>, <code>EAN-13</code>, <code>EAN-8</code>, <code>UPC-A</code>, <code>UPC-E</code>, <code>ITF</code>, <code>PDF417</code>, <code>Aztec</code>.</p>
+      <p style="color:var(--muted);">On devices without BarcodeDetector (iPhone, desktop), the app falls back to the <strong style="color:var(--text)">ZXing library</strong> loaded on-demand, or you can take a photo of the label instead and let the desktop OCR read it.</p>
+    </div>
+
+    <!-- U direction logic -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">🔢 U position auto-detection</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">Engineers may work a rack top-down (starting at U42) or bottom-up (starting at U1). The field app detects the direction automatically so the suggested next U is always correct:</p>
+      <ul style="color:var(--muted);margin-left:20px;margin-bottom:12px;">
+        <li>After <strong style="color:var(--text)">two or more items</strong> are logged, the app compares the first item's U with the last item's U. If U is decreasing → top-down mode; if increasing → bottom-up mode.</li>
+        <li>With only <strong style="color:var(--text)">one item</strong>, it assumes top-down if that item is above U21, bottom-up if at U21 or below.</li>
+      </ul>
+      <p style="color:var(--muted);">The suggested next U is always one slot past the outermost item already logged — so if you just logged U38–U40, the next suggestion is U37 (top-down) or U41 (bottom-up).</p>
+    </div>
+
+    <!-- Duplicate & gap detection -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">🔍 Duplicate &amp; U-gap detection</h3>
+      <p style="color:var(--muted);margin-bottom:12px;"><strong style="color:var(--text)">Duplicate detection</strong> runs automatically every time the table re-renders. It groups all rows by serial number and flags any serial number that appears in more than one row. An orange warning banner shows the duplicates so you can correct the wrong entry before exporting.</p>
+      <p style="color:var(--muted);"><strong style="color:var(--text)">U-gap detection</strong> groups rows by Rack # and checks whether the U positions in use cover the full rack continuously. Any contiguous block of U slots with no logged equipment is reported as a gap — meaning either that space is genuinely empty or an item was missed. The gap panel is collapsible and shown below the main table.</p>
+    </div>
+
+    <!-- Audit trail -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">📋 Audit trail</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">Every action taken in the desktop scanner is logged to an in-memory audit trail. Each entry records:</p>
+      <ul style="color:var(--muted);margin-left:20px;margin-bottom:12px;">
+        <li><strong style="color:var(--text)">Timestamp</strong> — when the action happened</li>
+        <li><strong style="color:var(--text)">Engineer</strong> — the name entered in the Engineer field</li>
+        <li><strong style="color:var(--text)">Action</strong> — what happened (OCR scan, manual edit, import, barcode scan)</li>
+        <li><strong style="color:var(--text)">Rack / Unit / Serial</strong> — which asset was affected</li>
+        <li><strong style="color:var(--text)">Old value</strong> — for corrections, what the original OCR read before the edit</li>
+      </ul>
+      <p style="color:var(--muted);">When you export to Excel, the audit trail appears as a second sheet called <em>Audit Log</em> in the same <code>.xlsx</code> file — so the full history of who reviewed what travels with the asset data.</p>
+    </div>
+
+    <!-- Offline storage -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+      <h3 style="color:#fff;margin-bottom:12px;">💾 Offline storage in the field app</h3>
+      <p style="color:var(--muted);margin-bottom:12px;">The field app stores all data in <strong style="color:var(--text)">browser localStorage</strong> — a per-origin key-value store built into every browser. There is no server, no account, and no sync. Data persists across sessions as long as you don't clear browser storage.</p>
+      <p style="color:var(--muted);margin-bottom:12px;">Every time you save an item, the entire sessions array is serialised to JSON and written to localStorage. The <em>"💾 Saved offline"</em> indicator flashes green to confirm each write succeeded.</p>
+      <p style="color:var(--muted);">Photos are stored as compressed JPEG base64 strings (max 1600px, ~82% quality). A rack survey with 20 items and 2 photos each typically occupies 10–20 MB of localStorage. Most browsers allow 5–10 MB per origin; if storage fills up, the app will show an error and you should export and clear old sessions.</p>
+    </div>
+
   </div>
 </div>
 
