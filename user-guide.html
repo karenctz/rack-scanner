@@ -433,7 +433,8 @@
           <li><strong>Start U / End U</strong> — U position in the rack (app auto-suggests the next free slot based on whether you're working top-down or bottom-up)</li>
           <li><strong>Category</strong> — Server, Network Switch, UPS, Storage, PDU, KVM, or Other</li>
           <li><strong>Manufacturer / Part Number</strong> — fill in what you know</li>
-          <li><strong>Serial Number</strong> — scan a barcode <em>or</em> type it manually</li>
+          <li><strong>Serial Number</strong> — tap the scan button to read a barcode, or type manually</li>
+          <li><strong>Part Number</strong> — tap the scan button to read a barcode, or type manually</li>
           <li><strong>Photo</strong> — take a photo of the equipment label (used later for AI OCR on the desktop)</li>
           <li><strong>Notes</strong> — any extra notes</li>
         </ul>
@@ -448,15 +449,16 @@
       <div class="step-num">4</div>
       <div class="step-body">
         <h3>Scan barcodes directly</h3>
-        <p>In the item sheet, tap <strong>Scan Barcode</strong>. The camera will open and automatically read 1D or 2D barcodes. When a barcode is detected:</p>
+        <p>Both the <strong>Serial Number</strong> and <strong>Part Number</strong> fields have a barcode scan button (the barcode icon on the right). Tap either one to open the camera scanner, which reads 1D and 2D barcodes automatically. When a barcode is detected:</p>
         <ul>
-          <li>The serial number field fills in automatically</li>
+          <li>The correct field fills in automatically</li>
           <li>The camera closes</li>
-          <li>The row is marked with a <strong style="color:var(--green)">green dot</strong> (barcode-confirmed)</li>
+          <li>The scan button turns <strong style="color:var(--green)">green</strong> to confirm the scan</li>
         </ul>
+        <p>This is especially useful on equipment that has separate S/N and P/N barcodes on the label — you can scan both without typing anything.</p>
         <div class="callout callout-warn">
           <span class="callout-icon">⚠️</span>
-          <p><strong>Android only:</strong> Barcode scanning uses the native Chrome BarcodeDetector API — it works best on Android Chrome. On iPhone you'll need to enter serial numbers manually or take photos for desktop OCR.</p>
+          <p><strong>Android only:</strong> Barcode scanning uses the native Chrome BarcodeDetector API — it works best on Android Chrome. On iPhone you'll need to enter numbers manually or take photos for desktop OCR.</p>
         </div>
       </div>
     </div>
@@ -731,10 +733,11 @@
       <h3 style="color:#fff;margin-bottom:8px;">🔍 Barcode scanner not detecting</h3>
       <ul style="color:var(--muted);margin-left:20px;">
         <li>Barcode scanning requires <strong>Android Chrome</strong> — it does not work on iPhone or desktop browsers</li>
+        <li>Both <strong>Serial Number</strong> and <strong>Part Number</strong> fields have a scan button — tap the one for the field you want to fill</li>
         <li>Make sure you <strong>granted camera permission</strong> when the browser asked</li>
         <li>Hold the barcode <strong>steady</strong> in the camera frame — the scanner needs about 1–2 seconds to lock on</li>
         <li>If the scanner opens but never detects, try moving <strong>closer or further</strong> from the barcode</li>
-        <li>Very small or damaged barcodes may not scan — type the serial number manually instead</li>
+        <li>Very small or damaged barcodes may not scan — type the value manually instead</li>
       </ul>
     </div>
 
