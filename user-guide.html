@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rack Asset Scanner — Field Engineer User Guide</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #222540;
+    --border: #2d3154;
+    --text: #e2e8f0;
+    --muted: #8892b0;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --blue: #60a5fa;
+    --purple: #a855f7;
+    --orange: #f97316;
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ─── COVER ─── */
+  .cover {
+    background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 60%, #1a1230 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cover .logo {
+    font-size: 48px;
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .cover .subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    margin-bottom: 40px;
+    max-width: 520px;
+  }
+  .cover .badges {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .toc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 36px;
+    text-align: left;
+    width: 100%;
+    max-width: 560px;
+  }
+  .toc-card h3 { color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+  .toc-card ol { padding-left: 20px; }
+  .toc-card li { margin-bottom: 8px; }
+  .toc-card a { color: var(--accent2); text-decoration: none; font-weight: 500; }
+  .toc-card a:hover { text-decoration: underline; }
+
+  /* ─── LAYOUT ─── */
+  .page { max-width: 900px; margin: 0 auto; padding: 60px 32px; }
+
+  /* ─── SECTION HEADERS ─── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .icon-blue { background: rgba(96,165,250,0.15); }
+  .icon-green { background: rgba(34,197,94,0.15); }
+  .icon-purple { background: rgba(168,85,247,0.15); }
+  .section-header h2 { font-size: 28px; font-weight: 700; color: #fff; }
+  .section-header p { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── STEPS ─── */
+  .steps { display: flex; flex-direction: column; gap: 32px; }
+  .step {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 0 20px;
+    align-items: start;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-body h3 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  .step-body p { color: var(--muted); margin-bottom: 8px; }
+  .step-body ul, .step-body ol { margin-left: 20px; color: var(--muted); margin-bottom: 8px; }
+  .step-body li { margin-bottom: 4px; }
+  .step-body li strong { color: var(--text); }
+
+  /* ─── SCREENSHOTS ─── */
+  .screenshot-wrap {
+    margin: 20px 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+  }
+  .screenshot-wrap .caption {
+    background: var(--surface2);
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  .screenshot-wrap img {
+    width: 100%;
+    display: block;
+  }
+
+  /* ─── CALLOUT ─── */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-tip { background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3); }
+  .callout-warn { background: rgba(234,179,8,0.10); border: 1px solid rgba(234,179,8,0.3); }
+  .callout-info { background: rgba(96,165,250,0.10); border: 1px solid rgba(96,165,250,0.3); }
+  .callout p { color: var(--text); }
+  .callout strong { color: #fff; }
+
+  /* ─── CONFIDENCE LEGEND ─── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ─── CODE / INLINE ─── */
+  code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    color: var(--accent2);
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 60px 0;
+  }
+
+  /* ─── SECTION SEPARATOR ─── */
+  .section-sep {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    max-width: 100%;
+    margin: 0;
+  }
+  .section-sep-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .section-sep-inner span { color: var(--accent2); font-size: 16px; }
+
+  /* ─── QUICK REF ─── */
+  .qref {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .qref-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .qref-item .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .qref-item .value {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    text-align: center;
+    padding: 60px 32px;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+  .footer a { color: var(--accent2); text-decoration: none; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .cover { min-height: auto; padding: 40px; page-break-after: always; }
+    .section-sep { background: #f5f5f5; }
+    img { max-width: 100%; }
+    code { background: #f5f5f5; color: #333; border-color: #ddd; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<div class="cover">
+  <div class="logo">📋</div>
+  <h1>Rack Asset Scanner</h1>
+  <p class="subtitle">Field Engineer User Guide — Step-by-step instructions for capturing, processing, and visualising rack inventory</p>
+  <div class="badges">
+    <span class="badge">Field App (mobile)</span>
+    <span class="badge">Desktop Scanner</span>
+    <span class="badge">Rack Diagram Visualiser</span>
+  </div>
+  <div class="toc-card">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#overview">System Overview</a></li>
+      <li><a href="#field-app">Field App — Capturing Rack Data On-Site</a></li>
+      <li><a href="#desktop-app">Desktop Scanner — OCR Processing &amp; Excel Export</a></li>
+      <li><a href="#rack-diagram">Rack Diagram Visualiser — Front &amp; Rear Views</a></li>
+      <li><a href="#tips">Tips &amp; Troubleshooting</a></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ═══════════════════ OVERVIEW ═══════════════════ -->
+<div class="page" id="overview">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🗺️</div>
+    <div>
+      <h2>System Overview</h2>
+      <p>How the three tools work together</p>
+    </div>
+  </div>
+
+  <p style="color:var(--muted); margin-bottom: 32px;">The Rack Asset Scanner system is a three-step workflow. You use the <strong style="color:var(--text)">Field App</strong> on your phone to capture photos and barcode scans on-site, then the <strong style="color:var(--text)">Desktop Scanner</strong> to process those photos with AI and export to Excel, and finally the <strong style="color:var(--text)">Rack Diagram Visualiser</strong> to generate a visual front/rear diagram of each rack.</p>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+      <div style="text-align:center;flex:1;min-width:130px;">
+        <div style="font-size:36px;margin-bottom:8px;">📱</div>
+        <div style="font-weight:600;color:#fff;margin-bottom:4px;">1. Field App</div>
+        <div style="font-size:13px;color:var(--muted);">On-site capture<br>Photos + barcodes</div>
+      </div>
+      <div style="font-size:28px;color:var(--border);padding:0 8px;">→</div>
+      <div style="text-align:center;flex:1;min-width:130px;">
+        <div style="font-size:36px;margin-bottom:8px;">🖥️</div>
+        <div style="font-weight:600;color:#fff;margin-bottom:4px;">2. Desktop Scanner</div>
+        <div style="font-size:13px;color:var(--muted);">AI OCR processing<br>Excel export</div>
+      </div>
+      <div style="font-size:28px;color:var(--border);padding:0 8px;">→</div>
+      <div style="text-align:center;flex:1;min-width:130px;">
+        <div style="font-size:36px;margin-bottom:8px;">📊</div>
+        <div style="font-weight:600;color:#fff;margin-bottom:4px;">3. Rack Diagram</div>
+        <div style="font-size:13px;color:var(--muted);">Visual front + rear<br>rack layout</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="qref">
+    <div class="qref-item">
+      <div class="label">Field App URL</div>
+      <div class="value"><a href="https://karenctz.github.io/rack-scanner/field.html" style="color:var(--accent2)">Open on your phone →</a></div>
+    </div>
+    <div class="qref-item">
+      <div class="label">Desktop Scanner URL</div>
+      <div class="value"><a href="https://karenctz.github.io/rack-scanner/" style="color:var(--accent2)">Open on your PC →</a></div>
+    </div>
+    <div class="qref-item">
+      <div class="label">Rack Diagram URL</div>
+      <div class="value"><a href="https://karenctz.github.io/rack-scanner/rack-diagram.html" style="color:var(--accent2)">Open on your PC →</a></div>
+    </div>
+    <div class="qref-item">
+      <div class="label">Works best on</div>
+      <div class="value">Chrome or Edge (Android / Windows)</div>
+    </div>
+  </div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">💡</span>
+    <p><strong>No install needed.</strong> Everything runs in your browser. Bookmark the field app URL on your phone's home screen for quick access on site.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════ FIELD APP SECTION ═══════════════════ -->
+<div class="section-sep">
+  <div class="section-sep-inner"><span>📱</span> Part 1 — Field App</div>
+</div>
+
+<div class="page" id="field-app">
+  <div class="section-header">
+    <div class="section-icon icon-green">📱</div>
+    <div>
+      <h2>Field App</h2>
+      <p>Capture rack inventory on-site using your phone</p>
+    </div>
+  </div>
+
+  <div class="screenshot-wrap">
+    <img src="screenshots/02-field-app.png" alt="Field App home screen showing Rack Field Capture with no sessions yet">
+    <div class="caption">Field App home screen — tap the blue + button to start a new rack survey</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Open the Field App on your phone</h3>
+        <p>Navigate to <code>karenctz.github.io/rack-scanner/field.html</code> in Chrome (Android) or Safari (iPhone). For quickest access, add it to your home screen:</p>
+        <ul>
+          <li><strong>Android Chrome:</strong> Tap ⋮ menu → <em>Add to Home screen</em></li>
+          <li><strong>iPhone Safari:</strong> Tap Share → <em>Add to Home Screen</em></li>
+        </ul>
+        <div class="callout callout-info">
+          <span class="callout-icon">ℹ️</span>
+          <p>The app works <strong>offline</strong> once loaded. Your data is saved automatically to the phone — you'll see <em>"💾 Saved offline"</em> flash green at the top after each change.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Create a new rack survey</h3>
+        <p>Tap the <strong>blue + button</strong> in the bottom-right corner. Enter the rack details:</p>
+        <ul>
+          <li><strong>Rack #</strong> — the rack label (e.g. <code>DC-A-01</code>)</li>
+          <li><strong>Location</strong> — room or data hall (e.g. <code>Floor 3, Hall B</code>)</li>
+          <li><strong>Total U</strong> — rack height (e.g. <code>42</code>)</li>
+        </ul>
+        <p>Tap <strong>Create</strong>. Repeat for each rack you need to document.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Add items to a rack</h3>
+        <p>Tap on a rack to open it, then tap <strong>+ Add Item</strong> to log each piece of equipment. For each item:</p>
+        <ul>
+          <li><strong>Start U / End U</strong> — U position in the rack (app auto-suggests the next free slot based on whether you're working top-down or bottom-up)</li>
+          <li><strong>Category</strong> — Server, Network Switch, UPS, Storage, PDU, KVM, or Other</li>
+          <li><strong>Manufacturer / Part Number</strong> — fill in what you know</li>
+          <li><strong>Serial Number</strong> — scan a barcode <em>or</em> type it manually</li>
+          <li><strong>Photo</strong> — take a photo of the equipment label (used later for AI OCR on the desktop)</li>
+          <li><strong>Notes</strong> — any extra notes</li>
+        </ul>
+        <div class="callout callout-tip">
+          <span class="callout-icon">💡</span>
+          <p><strong>U direction is auto-detected.</strong> If you start from U42 (top) the app will decrement each new item's suggested U. If you start from U1 (bottom) it increments. Just enter the first two items and the app figures out the pattern.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Scan barcodes directly</h3>
+        <p>In the item sheet, tap <strong>Scan Barcode</strong>. The camera will open and automatically read 1D or 2D barcodes. When a barcode is detected:</p>
+        <ul>
+          <li>The serial number field fills in automatically</li>
+          <li>The camera closes</li>
+          <li>The row is marked with a <strong style="color:var(--green)">green dot</strong> (barcode-confirmed)</li>
+        </ul>
+        <div class="callout callout-warn">
+          <span class="callout-icon">⚠️</span>
+          <p><strong>Android only:</strong> Barcode scanning uses the native Chrome BarcodeDetector API — it works best on Android Chrome. On iPhone you'll need to enter serial numbers manually or take photos for desktop OCR.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Export and share your session</h3>
+        <p>When you've finished logging all racks, go back to the home screen and tap <strong>Export All</strong>. This creates a <code>.json</code> session file and opens the share sheet so you can:</p>
+        <ul>
+          <li><strong>Email it to yourself</strong> — tap Mail/Outlook and send to your work email</li>
+          <li><strong>Save to Files / Google Drive</strong></li>
+          <li><strong>AirDrop</strong> to a nearby Mac</li>
+        </ul>
+        <p>You'll load this <code>.json</code> file into the Desktop Scanner in the next step.</p>
+        <div class="callout callout-tip">
+          <span class="callout-icon">💡</span>
+          <p>You can also <strong>delete a rack</strong> if you made a mistake — scroll to the bottom of any rack page and tap <em>Delete this rack</em>.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ DESKTOP SCANNER SECTION ═══════════════════ -->
+<div class="section-sep">
+  <div class="section-sep-inner"><span>🖥️</span> Part 2 — Desktop Scanner</div>
+</div>
+
+<div class="page" id="desktop-app">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🖥️</div>
+    <div>
+      <h2>Desktop Scanner</h2>
+      <p>Process photos with AI and export the asset inventory to Excel</p>
+    </div>
+  </div>
+
+  <div class="screenshot-wrap">
+    <img src="screenshots/01-desktop-app.png" alt="Desktop Scanner showing the upload zone, action buttons, and empty asset inventory table">
+    <div class="caption">Desktop Scanner — paste your Power Automate Flow URL, enter your name, then drop photos or a field session JSON</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Set up the Desktop Scanner</h3>
+        <p>Open <a href="https://karenctz.github.io/rack-scanner/" style="color:var(--accent2)">karenctz.github.io/rack-scanner/</a> on your PC in Chrome or Edge.</p>
+        <ul>
+          <li><strong>Power Automate Flow URL</strong> — paste the HTTP trigger URL from your Power Automate flow (ask your admin if you don't have this)</li>
+          <li><strong>Engineer</strong> — enter your name (saved automatically for next time)</li>
+        </ul>
+        <div class="callout callout-info">
+          <span class="callout-icon">ℹ️</span>
+          <p>Your engineer name appears in the <strong>audit log</strong> alongside every scan action so it's traceable who processed what.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Load your data</h3>
+        <p>Drag and drop files into the upload zone, or click to browse. You can load:</p>
+        <ul>
+          <li><strong>Field session (.json)</strong> — exported from the field app. The app will import all rack data immediately.</li>
+          <li><strong>Photos (JPG, PNG, HEIC, WebP, BMP)</strong> — individual equipment photos for AI OCR processing. Drop multiple at once.</li>
+          <li><strong>Both together</strong> — if your session includes photos, the app auto-splits: items with barcodes/manual data are imported directly; items with photos are queued for OCR.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Run AI scanning</h3>
+        <p>Click <strong>Scan with AI Builder</strong>. The app sends each photo to Microsoft AI Builder (via Power Automate), which reads the text on the equipment labels and extracts:</p>
+        <ul>
+          <li>Serial Number</li>
+          <li>Part Number</li>
+          <li>Manufacturer</li>
+          <li>Category (auto-detected from label text)</li>
+        </ul>
+        <p>Results appear in the table row by row as each photo is processed. A progress counter shows how many remain.</p>
+        <div class="callout callout-warn">
+          <span class="callout-icon">⚠️</span>
+          <p>OCR results are not always perfect. Always <strong>review yellow-dot rows</strong> (see confidence indicators below) before exporting.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Understand confidence indicators</h3>
+        <p>Each row has a coloured dot showing how reliable the data is:</p>
+        <div class="legend">
+          <div class="legend-item"><div class="dot" style="background:#22c55e"></div> <strong style="color:var(--text)">Green</strong> — barcode scan (most reliable)</div>
+          <div class="legend-item"><div class="dot" style="background:#eab308"></div> <strong style="color:var(--text)">Yellow</strong> — AI OCR (review recommended)</div>
+          <div class="legend-item"><div class="dot" style="background:#60a5fa"></div> <strong style="color:var(--text)">Blue</strong> — direct import from field app</div>
+          <div class="legend-item"><div class="dot" style="background:#6b7280"></div> <strong style="color:var(--text)">Grey</strong> — manually typed</div>
+          <div class="legend-item"><div class="dot" style="background:#a855f7"></div> <strong style="color:var(--text)">Purple</strong> — OCR result that was manually corrected</div>
+        </div>
+        <p>Click any cell in the table to edit it. Correcting an OCR field changes it to purple and logs the change to the audit trail.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Check for issues before export</h3>
+        <p>The app automatically flags problems as you work:</p>
+        <ul>
+          <li><strong style="color:var(--orange)">Duplicate serial numbers</strong> — an orange banner appears if the same serial number appears in two different rack positions. Click the banner for details.</li>
+          <li><strong>U-gap detection</strong> — a panel below the table shows any undocumented U slots per rack (equipment you may have missed).</li>
+        </ul>
+        <p>If you have data across multiple racks, use the <strong>rack filter chips</strong> at the top of the table to focus on one rack at a time.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Export to Excel</h3>
+        <p>Once you're happy with the data, click one of the export buttons:</p>
+        <ul>
+          <li><strong>Export to Excel</strong> — downloads a <code>.xlsx</code> file with two sheets: <em>Asset Inventory</em> (all rack data) and <em>Audit Log</em> (full action history)</li>
+          <li><strong>Export ZIP (Excel + Photos)</strong> — downloads a <code>.zip</code> containing the Excel file plus all the original photos, organised by rack</li>
+        </ul>
+        <div class="callout callout-tip">
+          <span class="callout-icon">💡</span>
+          <p>The export validates your data first. If any rows are missing a Rack # or Serial Number, you'll see a warning asking you to fix them before continuing.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <h3>Add rows manually</h3>
+        <p>If you need to add items that don't have photos or barcodes:</p>
+        <ul>
+          <li>Click <strong>+ Add Row</strong> to insert a blank row</li>
+          <li>Or click the <strong>+ Add row</strong> link at the bottom of the table</li>
+          <li>Fill in the fields directly in the table</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ RACK DIAGRAM SECTION ═══════════════════ -->
+<div class="section-sep">
+  <div class="section-sep-inner"><span>📊</span> Part 3 — Rack Diagram Visualiser</div>
+</div>
+
+<div class="page" id="rack-diagram">
+  <div class="section-header">
+    <div class="section-icon icon-purple">📊</div>
+    <div>
+      <h2>Rack Diagram Visualiser</h2>
+      <p>Generate front &amp; rear visual diagrams from the exported Excel file</p>
+    </div>
+  </div>
+
+  <div class="screenshot-wrap">
+    <img src="screenshots/03-rack-diagram.png" alt="Rack Diagram Visualiser showing a drop zone for an Excel file">
+    <div class="caption">Rack Diagram Visualiser — drop your exported Excel file to generate front and rear views of every rack</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Open the Rack Diagram Visualiser</h3>
+        <p>Open <a href="https://karenctz.github.io/rack-scanner/rack-diagram.html" style="color:var(--accent2)">karenctz.github.io/rack-scanner/rack-diagram.html</a> on your PC.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Load the Excel file</h3>
+        <p>Drag and drop the <code>rack-assets-YYYY-MM-DD.xlsx</code> file exported from the Desktop Scanner onto the upload zone, or click to browse for it.</p>
+        <p>The visualiser reads the <em>Asset Inventory</em> sheet and automatically groups equipment by rack.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>View the rack diagrams</h3>
+        <p>One section appears per rack, showing:</p>
+        <ul>
+          <li><strong>Front view</strong> — colour-coded by category, U1 at the bottom (physical orientation)</li>
+          <li><strong>Rear view</strong> — same layout, slightly dimmed</li>
+        </ul>
+        <p>Category colours used:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+          <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Server</span>
+          <span style="background:#16a34a;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Network Switch</span>
+          <span style="background:#ea580c;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">UPS</span>
+          <span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Storage</span>
+          <span style="background:#dc2626;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">PDU</span>
+          <span style="background:#ca8a04;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">KVM</span>
+          <span style="background:#475569;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Other</span>
+        </div>
+        <div class="callout callout-tip" style="margin-top:12px;">
+          <span class="callout-icon">💡</span>
+          <p><strong>Hover over any item</strong> in the diagram to see a tooltip with the full details: Serial Number, Part Number, Manufacturer, and U position.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Print or save the diagram</h3>
+        <p>Click the <strong>Print</strong> button in the top-right corner. This opens the print dialog where you can:</p>
+        <ul>
+          <li>Print to a physical printer</li>
+          <li>Save as PDF (<em>"Save as PDF"</em> in the destination dropdown)</li>
+        </ul>
+        <p>The print layout uses a clean white background optimised for paper or PDF.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Adjust rack height if needed</h3>
+        <p>If your rack is not 42U, use the <strong>Rack Height</strong> dropdown (24U / 36U / 42U / 48U) to match your actual racks. You can also adjust the <strong>px per U</strong> setting to make the diagram taller or shorter.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ TIPS SECTION ═══════════════════ -->
+<div class="section-sep">
+  <div class="section-sep-inner"><span>🛠️</span> Tips &amp; Troubleshooting</div>
+</div>
+
+<div class="page" id="tips">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🛠️</div>
+    <div>
+      <h2>Tips &amp; Troubleshooting</h2>
+      <p>Common questions and how to resolve them</p>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">📷 Tips for taking good label photos</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>Hold the camera <strong>parallel</strong> to the label — avoid angling</li>
+        <li>Ensure the label is <strong>fully lit</strong> — use your phone torch if the rack interior is dark</li>
+        <li>Capture the <strong>whole label</strong> in frame, not just the serial number barcode</li>
+        <li>AI Builder reads text best when the image is <strong>sharp and in focus</strong> — tap to focus before shooting</li>
+        <li>Photo orientation is corrected automatically, so portrait or landscape both work</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">🔍 Barcode scanner not detecting</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>Barcode scanning requires <strong>Android Chrome</strong> — it does not work on iPhone or desktop browsers</li>
+        <li>Make sure you <strong>granted camera permission</strong> when the browser asked</li>
+        <li>Hold the barcode <strong>steady</strong> in the camera frame — the scanner needs about 1–2 seconds to lock on</li>
+        <li>If the scanner opens but never detects, try moving <strong>closer or further</strong> from the barcode</li>
+        <li>Very small or damaged barcodes may not scan — type the serial number manually instead</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">🤖 AI OCR gave wrong results</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>Click directly on the wrong field in the table and type the correction</li>
+        <li>The row will change to a <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#a855f7;vertical-align:middle;margin:0 3px"></span><strong style="color:var(--text)">purple dot</strong> indicating a manual correction, and the original OCR value is logged to the audit trail</li>
+        <li>If a whole photo is unreadable, delete the row and add it manually using <strong>+ Add Row</strong></li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">🔁 Duplicate serial number warning</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>An orange banner appears when the same serial number is found in two different rows</li>
+        <li>This usually means one was misread by OCR — check both rows and correct the wrong one</li>
+        <li>Dismiss the banner by clicking ✕ once you've resolved the duplicates</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">📤 Field app export didn't open email</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>The share sheet requires a mail app to be installed on your phone</li>
+        <li>If tapping <strong>Export All</strong> asks you to save a file instead of showing the share sheet, your browser may not support the Web Share API — save the file to Files/Drive and attach it manually to an email</li>
+        <li>If you tap Cancel on the share sheet, the file is still available in your Downloads folder</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">💾 Field app data seems lost after closing the browser</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>Data is saved to your phone's <strong>local storage</strong> — it persists as long as you don't clear your browser data</li>
+        <li>Do <strong>not</strong> use Private/Incognito mode — data is not saved in private browsing</li>
+        <li>Always export your session before clearing browser data or switching phones</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h3 style="color:#fff;margin-bottom:8px;">📊 Rack diagram is missing some equipment</h3>
+      <ul style="color:var(--muted);margin-left:20px;">
+        <li>The diagram reads from the <strong>Asset Inventory</strong> sheet in the Excel file — make sure you're loading the correct export</li>
+        <li>Items without a <strong>Rack #</strong> or valid <strong>Start U / End U</strong> values are not drawn</li>
+        <li>Check that the U values in the spreadsheet are numbers, not text</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <h3 style="color:#fff;margin-bottom:16px;">Quick Reference — Workflow Summary</h3>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:600;">Step</th>
+          <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:600;">Tool</th>
+          <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:600;">Action</th>
+          <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:600;">Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 12px;color:var(--accent2);font-weight:600;">1</td>
+          <td style="padding:10px 12px;">📱 Field App</td>
+          <td style="padding:10px 12px;color:var(--muted);">Photograph labels, scan barcodes, fill in details</td>
+          <td style="padding:10px 12px;color:var(--muted);"><code>.json</code> session file</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 12px;color:var(--accent2);font-weight:600;">2</td>
+          <td style="padding:10px 12px;">🖥️ Desktop Scanner</td>
+          <td style="padding:10px 12px;color:var(--muted);">Import session + run AI OCR, review &amp; correct</td>
+          <td style="padding:10px 12px;color:var(--muted);"><code>.xlsx</code> + <code>.zip</code></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;color:var(--accent2);font-weight:600;">3</td>
+          <td style="padding:10px 12px;">📊 Rack Diagram</td>
+          <td style="padding:10px 12px;color:var(--muted);">Drop the Excel file, view front + rear diagrams</td>
+          <td style="padding:10px 12px;color:var(--muted);">Print / PDF</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<div class="footer">
+  <p>Rack Asset Scanner — Internal Tool</p>
+  <p style="margin-top:6px;">Field App: <a href="https://karenctz.github.io/rack-scanner/field.html">field.html</a> &nbsp;·&nbsp; Desktop Scanner: <a href="https://karenctz.github.io/rack-scanner/">index.html</a> &nbsp;·&nbsp; Rack Diagram: <a href="https://karenctz.github.io/rack-scanner/rack-diagram.html">rack-diagram.html</a></p>
+</div>
+
+</body>
+</html>
