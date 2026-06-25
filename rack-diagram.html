@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rack Diagram Visualiser</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+header { background: #1a1d2e; border-bottom: 1px solid #2d3148; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 17px; font-weight: 600; }
+header span { font-size: 11px; color: #64748b; background: #2d3148; padding: 2px 8px; border-radius: 4px; }
+.toolbar { display: flex; gap: 10px; align-items: center; padding: 14px 24px; background: #1a1d2e; border-bottom: 1px solid #2d3148; flex-wrap: wrap; }
+.toolbar label { font-size: 12px; color: #94a3b8; }
+.toolbar select, .toolbar input[type=number] { background: #0f1117; border: 1px solid #2d3148; color: #e2e8f0; padding: 5px 10px; border-radius: 6px; font-size: 12px; }
+.btn { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
+.btn-primary { background: #4f6ef7; color: white; }
+.btn-primary:hover { background: #3b5ef0; }
+.btn-secondary { background: #1a1d2e; color: #94a3b8; border: 1px solid #2d3148; }
+.btn-secondary:hover { background: #2d3148; }
+.drop-zone { border: 2px dashed #2d3148; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.2s; background: #1a1d2e; margin: 32px auto; max-width: 540px; }
+.drop-zone:hover, .drop-zone.over { border-color: #4f6ef7; background: #1e2240; }
+.drop-zone input { display: none; }
+.drop-zone p { color: #64748b; font-size: 14px; margin-top: 10px; }
+.drop-zone p strong { color: #94a3b8; }
+.content { padding: 24px; }
+.rack-section { margin-bottom: 48px; }
+.rack-title { font-size: 16px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+.rack-meta { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+.rack-views { display: flex; gap: 32px; flex-wrap: wrap; }
+.rack-view { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rack-view-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
+.rack-frame { position: relative; display: flex; }
+.u-numbers { display: flex; flex-direction: column; padding-top: 20px; /* top rail */ }
+.u-num { display: flex; align-items: center; justify-content: flex-end; padding-right: 5px; font-size: 9px; color: #475569; font-family: monospace; flex-shrink: 0; }
+.rack-body { position: relative; background: #111318; border: 2px solid #374151; border-radius: 4px; overflow: visible; }
+.rack-rail-top, .rack-rail-bottom { height: 20px; background: #1e2433; border-bottom: 1px solid #374151; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #4b5563; letter-spacing: 0.06em; }
+.rack-rail-bottom { border-top: 1px solid #374151; border-bottom: none; }
+.rack-slots { position: relative; }
+.rack-slot { position: absolute; left: 0; right: 0; border-bottom: 1px solid #1a1f2b; background: #13161f; }
+.rack-slot.empty { background: repeating-linear-gradient(45deg, #13161f, #13161f 4px, #0f1117 4px, #0f1117 8px); }
+.rack-item { position: absolute; left: 3px; right: 3px; border-radius: 3px; display: flex; align-items: center; padding: 0 8px; gap: 6px; overflow: hidden; cursor: default; transition: filter 0.15s; border: 1px solid rgba(255,255,255,0.08); }
+.rack-item:hover { filter: brightness(1.15); z-index: 10; }
+.rack-item .item-label { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.rack-item .item-cat { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.05em; }
+.rack-item .item-mfr { font-size: 9px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rack-item .item-sn  { font-size: 8px; font-family: monospace; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rack-item .item-u  { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.5); white-space: nowrap; flex-shrink: 0; font-family: monospace; }
+.rack-rear .rack-item { filter: brightness(0.8) saturate(0.7); }
+.rack-rear .rack-item:hover { filter: brightness(0.95) saturate(0.9); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #94a3b8; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.tooltip { position: fixed; background: #1e2240; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #e2e8f0; pointer-events: none; z-index: 999; max-width: 260px; display: none; }
+.tooltip strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.tooltip .tt-row { color: #94a3b8; margin-top: 2px; }
+.tooltip .tt-row span { color: #e2e8f0; }
+.empty-state { text-align: center; padding: 80px; color: #4a5568; }
+
+/* Print */
+@media print {
+  body { background: white; color: black; }
+  header, .toolbar, .drop-zone, .legend { display: none !important; }
+  .rack-section { page-break-after: always; margin-bottom: 0; }
+  .rack-title { color: black; }
+  .rack-meta { color: #555; }
+  .rack-body { border-color: #aaa; background: #f8f8f8; }
+  .rack-slot { background: #f0f0f0; border-color: #ddd; }
+  .rack-slot.empty { background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 4px, #e8e8e8 4px, #e8e8e8 8px); }
+  .rack-rail-top, .rack-rail-bottom { background: #ddd; color: #555; }
+  .u-num { color: #777; }
+  .rack-item .item-cat { color: rgba(0,0,0,0.85); }
+  .rack-item .item-mfr { color: rgba(0,0,0,0.55); }
+  .rack-item .item-sn  { color: rgba(0,0,0,0.4); }
+  .rack-item .item-u   { color: rgba(0,0,0,0.45); }
+  .rack-view-label { color: #555; }
+}
+</style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>
+  <h1>Rack Diagram Visualiser</h1>
+  <span>Front &amp; Rear View</span>
+</header>
+
+<div class="toolbar" id="toolbar" style="display:none">
+  <label>Rack height:</label>
+  <select id="rackHeightSel">
+    <option value="42">42U</option>
+    <option value="48">48U</option>
+    <option value="36">36U</option>
+    <option value="24">24U</option>
+  </select>
+  <label style="margin-left:8px">Unit px:</label>
+  <input type="number" id="unitPx" value="22" min="14" max="40" style="width:60px">
+  <button class="btn btn-secondary" onclick="render()">↺ Refresh</button>
+  <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save PDF</button>
+  <button class="btn btn-secondary" id="loadNewBtn">Load different file</button>
+</div>
+
+<div id="dropArea" class="content">
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+    <input type="file" id="fileIn" accept=".xlsx,.xls">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <p><strong>Drop the exported Excel file here</strong> or click to select</p>
+    <p style="margin-top:6px;font-size:12px">rack-assets-YYYY-MM-DD.xlsx from the Rack Asset Scanner</p>
+  </div>
+</div>
+
+<div id="diagrams" class="content" style="display:none"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const CATEGORY_COLORS = {
+  'Server':         '#2563eb',
+  'Network Switch': '#16a34a',
+  'UPS':            '#ea580c',
+  'Storage':        '#7c3aed',
+  'PDU':            '#dc2626',
+  'KVM':            '#ca8a04',
+  'Other':          '#475569',
+};
+
+let loadedRows = [];
+
+// ── Drop zone ─────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileIn   = document.getElementById('fileIn');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFile(e.dataTransfer.files[0]); });
+fileIn.addEventListener('change', () => handleFile(fileIn.files[0]));
+document.getElementById('loadNewBtn').addEventListener('click', () => {
+  document.getElementById('diagrams').style.display = 'none';
+  document.getElementById('dropArea').style.display = 'block';
+  document.getElementById('toolbar').style.display = 'none';
+  loadedRows = [];
+});
+
+document.getElementById('unitPx').addEventListener('change', render);
+document.getElementById('rackHeightSel').addEventListener('change', render);
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]]; // first sheet = Assets
+      const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      // Normalise column names (strip trailing spaces, handle case)
+      loadedRows = data.map(r => {
+        const norm = {};
+        Object.keys(r).forEach(k => { norm[k.trim()] = r[k]; });
+        return {
+          rack:         String(norm['Rack #'] || norm['Rack'] || '').trim(),
+          startU:       parseInt(norm['Start U'] || norm['StartU'] || 0),
+          endU:         parseInt(norm['End U']   || norm['EndU']   || 0),
+          category:     String(norm['Category'] || 'Other').trim(),
+          manufacturer: String(norm['Manufacturer'] || '').trim(),
+          partNumber:   String(norm['Part Number'] || '').trim(),
+          serialNumber: String(norm['Serial Number'] || '').trim(),
+          notes:        String(norm['Notes'] || '').trim(),
+        };
+      }).filter(r => r.rack && !isNaN(r.startU) && r.startU > 0);
+      if (!loadedRows.length) { alert('No valid rack data found in this file. Make sure you are using the exported rack-assets Excel.'); return; }
+      document.getElementById('dropArea').style.display = 'none';
+      document.getElementById('diagrams').style.display = 'block';
+      document.getElementById('toolbar').style.display = 'flex';
+      render();
+    } catch(err) {
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Render ────────────────────────────────────
+function render() {
+  const rackHeight = parseInt(document.getElementById('rackHeightSel').value);
+  const unitPx     = parseInt(document.getElementById('unitPx').value) || 22;
+  const container  = document.getElementById('diagrams');
+  container.innerHTML = '';
+
+  // Group by rack
+  const rackMap = {};
+  loadedRows.forEach(r => {
+    if (!rackMap[r.rack]) rackMap[r.rack] = [];
+    rackMap[r.rack].push(r);
+  });
+
+  // Legend
+  const usedCats = [...new Set(loadedRows.map(r => r.category))];
+  const legendEl = document.createElement('div');
+  legendEl.className = 'legend';
+  legendEl.innerHTML = usedCats.map(c =>
+    `<div class="legend-item"><div class="legend-swatch" style="background:${CATEGORY_COLORS[c]||CATEGORY_COLORS.Other}"></div>${c}</div>`
+  ).join('');
+  container.appendChild(legendEl);
+
+  Object.keys(rackMap).sort().forEach(rackId => {
+    const items = rackMap[rackId];
+    const section = document.createElement('div');
+    section.className = 'rack-section';
+    const filled = items.reduce((n, r) => n + (r.endU - r.startU + 1), 0);
+    const pct = Math.round(filled / rackHeight * 100);
+    section.innerHTML = `
+      <div class="rack-title">Rack ${rackId}</div>
+      <div class="rack-meta">${items.length} item${items.length!==1?'s':''} · ${filled}U used of ${rackHeight}U (${pct}% full)</div>
+      <div class="rack-views" id="views-${rackId}"></div>`;
+    container.appendChild(section);
+
+    const views = section.querySelector('.rack-views');
+    views.appendChild(buildRackView(rackId, items, rackHeight, unitPx, 'FRONT VIEW', false));
+    views.appendChild(buildRackView(rackId, items, rackHeight, unitPx, 'REAR VIEW',  true));
+  });
+
+  attachTooltips();
+}
+
+function buildRackView(rackId, items, rackHeight, unitPx, label, isRear) {
+  const rackW  = 280;
+  const totalH = rackHeight * unitPx;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'rack-view';
+  wrap.innerHTML = `<div class="rack-view-label">${label}</div>`;
+
+  // Frame
+  const frame = document.createElement('div');
+  frame.className = 'rack-frame';
+  if (isRear) frame.classList.add('rack-rear');
+
+  // U numbers column
+  const uCol = document.createElement('div');
+  uCol.className = 'u-numbers';
+  uCol.style.width = '24px';
+  // U numbers go top→bottom but represent U(rackHeight)→U1 (U1 at bottom)
+  for (let u = rackHeight; u >= 1; u--) {
+    const el = document.createElement('div');
+    el.className = 'u-num';
+    el.style.height = unitPx + 'px';
+    el.textContent = u;
+    uCol.appendChild(el);
+  }
+
+  // Rack body
+  const body = document.createElement('div');
+  body.className = 'rack-body';
+  body.style.width = rackW + 'px';
+
+  // Top rail
+  const topRail = document.createElement('div');
+  topRail.className = 'rack-rail-top';
+  topRail.textContent = isRear ? '◀ REAR ◀' : '▶ FRONT ▶';
+  body.appendChild(topRail);
+
+  // Slots container (relative positioned)
+  const slotsEl = document.createElement('div');
+  slotsEl.className = 'rack-slots';
+  slotsEl.style.height = totalH + 'px';
+  slotsEl.style.position = 'relative';
+  body.appendChild(slotsEl);
+
+  // Empty slot lines (every U)
+  for (let u = 1; u <= rackHeight; u++) {
+    const slot = document.createElement('div');
+    slot.className = 'rack-slot empty';
+    slot.style.cssText = `height:${unitPx}px;top:${(rackHeight - u) * unitPx}px;`;
+    slotsEl.appendChild(slot);
+  }
+
+  // Occupied items
+  // For rear view: mirror left/right (just visual flip via CSS transform on labels)
+  const occupied = new Set();
+  items.forEach(item => {
+    const s = Math.max(1, item.startU);
+    const e = Math.min(rackHeight, item.endU);
+    if (s > rackHeight || e < 1) return;
+    const uCount = e - s + 1;
+    const h = uCount * unitPx - 2;
+    // top = distance from top of slots area = (rackHeight - e) * unitPx + 1
+    const top = (rackHeight - e) * unitPx + 1;
+
+    for (let u = s; u <= e; u++) occupied.add(u);
+
+    const color = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
+    const el = document.createElement('div');
+    el.className = 'rack-item';
+    el.style.cssText = `top:${top}px;height:${h}px;background:${color}cc;`;
+    el.dataset.rack   = rackId;
+    el.dataset.item   = JSON.stringify(item);
+
+    const showMfr = h >= 28;
+    const showSn  = h >= 40;
+    const uLabel  = s === e ? `U${s}` : `U${s}–${e}`;
+
+    if (isRear) {
+      // Rear: show reversed label, cable management indicator
+      el.innerHTML = `
+        <span class="item-u" style="margin-left:auto">${uLabel}</span>
+        <div class="item-label" style="text-align:right;margin-left:auto">
+          <span class="item-cat">${item.category}</span>
+          ${showMfr ? `<span class="item-mfr">${item.manufacturer || ''}</span>` : ''}
+          ${showSn  ? `<span class="item-sn">${item.serialNumber || ''}</span>`  : ''}
+        </div>`;
+    } else {
+      el.innerHTML = `
+        <div class="item-label">
+          <span class="item-cat">${item.category}</span>
+          ${showMfr ? `<span class="item-mfr">${item.manufacturer || ''}</span>` : ''}
+          ${showSn  ? `<span class="item-sn">${item.serialNumber || ''}</span>`  : ''}
+        </div>
+        <span class="item-u">${uLabel}</span>`;
+    }
+    slotsEl.appendChild(el);
+  });
+
+  // Bottom rail
+  const botRail = document.createElement('div');
+  botRail.className = 'rack-rail-bottom';
+  botRail.textContent = `${rackId} · ${rackHeight}U`;
+  body.appendChild(botRail);
+
+  frame.appendChild(uCol);
+  frame.appendChild(body);
+  wrap.appendChild(frame);
+  return wrap;
+}
+
+// ── Tooltip ───────────────────────────────────
+function attachTooltips() {
+  const tip = document.getElementById('tooltip');
+  document.querySelectorAll('.rack-item').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const item = JSON.parse(el.dataset.item);
+      const uLabel = item.startU === item.endU ? `U${item.startU}` : `U${item.startU}–${item.endU}`;
+      tip.innerHTML = `
+        <strong>${item.category}</strong>
+        <div class="tt-row">Position: <span>${uLabel}</span></div>
+        ${item.manufacturer ? `<div class="tt-row">Manufacturer: <span>${item.manufacturer}</span></div>` : ''}
+        ${item.partNumber   ? `<div class="tt-row">Part #: <span style="font-family:monospace">${item.partNumber}</span></div>` : ''}
+        ${item.serialNumber ? `<div class="tt-row">Serial #: <span style="font-family:monospace">${item.serialNumber}</span></div>` : ''}
+        ${item.notes        ? `<div class="tt-row">Notes: <span>${item.notes}</span></div>` : ''}`;
+      tip.style.display = 'block';
+      moveTip(e);
+    });
+    el.addEventListener('mousemove', moveTip);
+    el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+}
+
+function moveTip(e) {
+  const tip = document.getElementById('tooltip');
+  const x = e.clientX + 14, y = e.clientY + 14;
+  const right = x + 270 > window.innerWidth;
+  tip.style.left  = right ? (e.clientX - 270) + 'px' : x + 'px';
+  tip.style.top   = y + 'px';
+}
+</script>
+</body>
+</html>
