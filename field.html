@@ -263,9 +263,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       </div>
     </div>
 
-    <div class="field">
-      <label>Part Number (optional)</label>
-      <input id="item-part" type="text" placeholder="e.g. 867960-B21" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-family:monospace">
+    <!-- Part number with barcode scan button -->
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase">Part Number <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="field-with-btn">
+        <div class="field">
+          <input id="item-part" type="text" placeholder="Scan barcode or type…" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-family:monospace">
+        </div>
+        <button class="scan-btn" id="scan-part-btn" title="Scan barcode">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="13" y1="8" x2="13" y2="12"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="19" y1="8" x2="19" y2="12"/><line x1="13" y1="15" x2="19" y2="15"/><line x1="19" y1="15" x2="19" y2="16"/><line x1="13" y1="15" x2="13" y2="16"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="field">
@@ -315,7 +323,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <video id="scanner-video" playsinline muted></video>
   <div class="scanner-ui">
     <div class="scanner-reticle"><span></span><div class="scanner-line"></div></div>
-    <div class="scanner-hint">Point camera at the serial number barcode</div>
+    <div class="scanner-hint" id="scanner-hint">Point camera at the barcode</div>
   </div>
   <div class="scanner-result" id="scanner-result"></div>
   <div class="scanner-status" id="scanner-status">Starting camera…</div>
@@ -592,8 +600,8 @@ function openItemSheet(itemIdx) {
     endULinkedToStart = true;
   }
 
-  const scanBtn = document.getElementById('scan-serial-btn');
-  scanBtn.classList.toggle('scanned', !!(item?.serialNumber));
+  document.getElementById('scan-serial-btn').classList.toggle('scanned', !!(item?.serialNumber));
+  document.getElementById('scan-part-btn').classList.toggle('scanned', !!(item?.partNumber));
 
   itemSheetSerialPhoto = item?.serialPhoto || null;
   itemSheetPhotos = [...(item?.photos || [])];
@@ -832,11 +840,17 @@ function readFiles(files, arr, done) {
 let scannerStream = null;
 let scannerAnimFrame = null;
 let barcodeDetector = null;
+let scanTarget = 'serial'; // 'serial' | 'part'
 
-document.getElementById('scan-serial-btn').addEventListener('click', openScanner);
+document.getElementById('scan-serial-btn').addEventListener('click', () => openScanner('serial'));
+document.getElementById('scan-part-btn').addEventListener('click', () => openScanner('part'));
 document.getElementById('scanner-close').addEventListener('click', closeScanner);
 
-async function openScanner() {
+async function openScanner(target) {
+  scanTarget = target || 'serial';
+  const labelMap = { serial: 'Serial Number', part: 'Part Number' };
+  document.querySelector('.scanner-topbar h3').textContent = `Scan ${labelMap[scanTarget]}`;
+  document.getElementById('scanner-hint').textContent = `Point camera at the ${labelMap[scanTarget].toLowerCase()} barcode`;
   const overlay = document.getElementById('scanner-overlay');
   const status  = document.getElementById('scanner-status');
   const result  = document.getElementById('scanner-result');
@@ -966,11 +980,15 @@ function onBarcodeDetected(value) {
   setTimeout(() => {
     document.getElementById('scanner-overlay').classList.remove('open');
     result.classList.remove('show');
-    // Fill the serial number field
-    const input = document.getElementById('item-serial');
-    input.value = value;
-    document.getElementById('scan-serial-btn').classList.add('scanned');
-    toast('Barcode scanned ✓');
+    if (scanTarget === 'part') {
+      document.getElementById('item-part').value = value;
+      document.getElementById('scan-part-btn').classList.add('scanned');
+      toast('Part number scanned ✓');
+    } else {
+      document.getElementById('item-serial').value = value;
+      document.getElementById('scan-serial-btn').classList.add('scanned');
+      toast('Serial number scanned ✓');
+    }
   }, 900);
 }
 
