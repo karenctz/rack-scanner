@@ -571,8 +571,21 @@ function openItemSheet(itemIdx) {
     const s = sessions[currentSessionIdx];
     let nextU = '';
     if (s.items.length > 0) {
-      const maxEnd = Math.max(...s.items.map(it => Number(it.endU) || Number(it.startU) || 0));
-      if (maxEnd > 0) nextU = maxEnd + 1;
+      const uVals = s.items.map(it => ({ s: Number(it.startU) || 0, e: Number(it.endU) || 0 }));
+      const minStart = Math.min(...uVals.map(u => u.s));
+      const maxEnd   = Math.max(...uVals.map(u => u.e));
+      // Detect direction: compare first and last item's U positions
+      // If items are trending downward (top-of-rack first), go down; else go up
+      let goingDown = false;
+      if (s.items.length >= 2) {
+        const first = Number(s.items[0].startU) || 0;
+        const last  = Number(s.items[s.items.length - 1].startU) || 0;
+        goingDown = last < first;
+      } else {
+        // Single item: if it's above U21 assume top-down, else bottom-up
+        goingDown = uVals[0].s > 21;
+      }
+      nextU = goingDown ? Math.max(1, minStart - 1) : maxEnd + 1;
     }
     document.getElementById('item-start-u').value = nextU;
     document.getElementById('item-end-u').value   = nextU;
