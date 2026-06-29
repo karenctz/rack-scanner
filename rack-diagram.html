@@ -61,7 +61,8 @@ header span { font-size: 11px; color: #64748b; background: #2d3148; padding: 2px
 
 /* Print */
 @media print {
-  body { background: white; color: black; }
+  @page { margin: 0; }
+  body { background: white; color: black; padding: 12mm; }
   header, .toolbar, .drop-zone, .legend { display: none !important; }
   .rack-section { page-break-after: always; margin-bottom: 0; }
   .rack-title { color: black; }
