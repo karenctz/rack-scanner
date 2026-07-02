@@ -657,24 +657,18 @@
       <div class="step-num">3</div>
       <div class="step-body">
         <h3>View the rack diagrams</h3>
-        <p>One section appears per rack, showing:</p>
-        <ul>
-          <li><strong>Front view</strong> — colour-coded by category, U1 at the bottom (physical orientation)</li>
-          <li><strong>Rear view</strong> — same layout, slightly dimmed</li>
-        </ul>
-        <p>Category colours used:</p>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
-          <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Server</span>
-          <span style="background:#16a34a;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Network Switch</span>
-          <span style="background:#ea580c;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">UPS</span>
-          <span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Storage</span>
-          <span style="background:#dc2626;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">PDU</span>
-          <span style="background:#ca8a04;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">KVM</span>
+        <p>One section appears per rack, showing a <strong>front view</strong> and a <strong>rear view</strong> side by side. Each item is drawn at the correct U positions with U1 at the bottom (matching physical rack orientation). Items are colour-coded by AssetType:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;margin-bottom:12px;">
+          <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Compute</span>
+          <span style="background:#16a34a;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Network</span>
+          <span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Backup</span>
+          <span style="background:#ca8a04;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">IP Telephone</span>
           <span style="background:#475569;color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;">Other</span>
         </div>
+        <p>A colour legend is shown below each rack. Gaps (empty U positions) are shown as dark empty slots so you can immediately see free space.</p>
         <div class="callout callout-tip" style="margin-top:12px;">
           <span class="callout-icon">💡</span>
-          <p><strong>Hover over any item</strong> in the diagram to see a tooltip with the full details: Serial Number, Part Number, Manufacturer, and U position.</p>
+          <p><strong>Hover over any item</strong> to see a tooltip with full details: AssetType, U position, Brand, Description, Serialnum, Status, and Department.</p>
         </div>
       </div>
     </div>
@@ -682,13 +676,8 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <h3>Print or save the diagram</h3>
-        <p>Click the <strong>Print</strong> button in the top-right corner. This opens the print dialog where you can:</p>
-        <ul>
-          <li>Print to a physical printer</li>
-          <li>Save as PDF (<em>"Save as PDF"</em> in the destination dropdown)</li>
-        </ul>
-        <p>The print layout uses a clean white background optimised for paper or PDF.</p>
+        <h3>Filter by rack</h3>
+        <p>If your Excel contains multiple racks, use the <strong>rack filter chips</strong> at the top to show only specific racks. Click a chip to toggle it on or off. All racks are shown by default.</p>
       </div>
     </div>
 
@@ -696,7 +685,28 @@
       <div class="step-num">5</div>
       <div class="step-body">
         <h3>Adjust rack height if needed</h3>
-        <p>If your rack is not 42U, use the <strong>Rack Height</strong> dropdown (24U / 36U / 42U / 48U) to match your actual racks. You can also adjust the <strong>px per U</strong> setting to make the diagram taller or shorter.</p>
+        <p>Use the <strong>Rack Height</strong> dropdown (24U / 36U / 42U / 48U) to match your physical racks. You can also change the <strong>px per U</strong> value to make diagrams taller or shorter on screen.</p>
+        <div class="callout callout-tip" style="margin-top:10px;">
+          <span class="callout-icon">💡</span>
+          <p>If items appear clipped or overflow the rack, set Rack Height to a larger value than the highest End U in your data.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Print or save as PDF</h3>
+        <p>Click the <strong>Print / Save PDF</strong> button in the top-right corner. In the print dialog:</p>
+        <ul>
+          <li>To save as PDF: set <em>Destination</em> to <strong>Save as PDF</strong></li>
+          <li>To print: select your printer as usual</li>
+        </ul>
+        <p>The layout switches to a clean white background for paper. The page URL is suppressed automatically so your PDF contains only the diagram.</p>
+        <div class="callout callout-tip" style="margin-top:10px;">
+          <span class="callout-icon">💡</span>
+          <p>Set <em>Layout</em> to <strong>Landscape</strong> in the print dialog if you have many racks side by side — it fits more on each page.</p>
+        </div>
       </div>
     </div>
 
