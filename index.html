@@ -261,14 +261,18 @@
       <thead>
         <tr>
           <th style="width:18px"></th>
-          <th style="width:90px">Rack #</th>
+          <th style="width:90px">Rack ID</th>
           <th style="width:70px">Start U</th>
           <th style="width:70px">End U</th>
-          <th style="width:130px">Category</th>
-          <th style="width:160px">Manufacturer</th>
-          <th style="width:200px">Part Number</th>
-          <th style="width:220px">Serial Number</th>
-          <th style="width:160px">Notes</th>
+          <th style="width:120px">Asset Type</th>
+          <th style="width:140px">Brand</th>
+          <th style="width:200px">Description</th>
+          <th style="width:200px">Serial Number</th>
+          <th style="width:110px">Asset Location</th>
+          <th style="width:120px">Status</th>
+          <th style="width:110px">Department</th>
+          <th style="width:110px">Owner</th>
+          <th style="width:160px">Remarks</th>
           <th style="width:80px">Source</th>
           <th style="width:40px"></th>
         </tr>
@@ -288,7 +292,9 @@
 </div>
 
 <script>
-const CATEGORIES = ['Server', 'Network Switch', 'UPS', 'Storage', 'PDU', 'KVM', 'Other'];
+const CATEGORIES = ['Compute', 'Network', 'Backup', 'IP Telephone'];
+const STATUSES   = ['Active', 'Decommissioned', 'Powered Off', 'Temporary'];
+const STATUS_DEFAULT = 'Active';
 
 let rows = [];
 let errorLog = [];
@@ -508,14 +514,22 @@ function renderTable() {
       <td><input type="number" value="${esc(row.startU)}" onchange="updateRow(${i},'startU',this.value)" placeholder="1" min="1" max="48"></td>
       <td><input type="number" value="${esc(row.endU)}" onchange="updateRow(${i},'endU',this.value)" placeholder="2" min="1" max="48"></td>
       <td>
-        <select onchange="updateRow(${i},'category',this.value)">
-          ${CATEGORIES.map(c => `<option ${row.category===c?'selected':''}>${c}</option>`).join('')}
+        <select onchange="updateRow(${i},'assetType',this.value)">
+          ${CATEGORIES.map(c => `<option ${(row.assetType||row.category)===c?'selected':''}>${c}</option>`).join('')}
         </select>
       </td>
-      <td><input value="${esc(row.manufacturer)}" onchange="updateRow(${i},'manufacturer',this.value)" placeholder="e.g. HPE"></td>
-      <td><input value="${esc(row.partNumber)}" onchange="updateRow(${i},'partNumber',this.value)" placeholder="e.g. 867960-B21"></td>
+      <td><input value="${esc(row.brand)}" onchange="updateRow(${i},'brand',this.value)" placeholder="e.g. HPE"></td>
+      <td><input value="${esc(row.description)}" onchange="updateRow(${i},'description',this.value)" placeholder="e.g. ProLiant DL360"></td>
       <td><input value="${esc(row.serialNumber)}" onchange="updateRow(${i},'serialNumber',this.value)" placeholder="e.g. CZJ1234567" style="${snStyle}"></td>
-      <td><input value="${esc(row.notes)}" onchange="updateRow(${i},'notes',this.value)" placeholder=""></td>
+      <td><input value="${esc(row.assetLocation)}" onchange="updateRow(${i},'assetLocation',this.value)" placeholder="e.g. RDC"></td>
+      <td>
+        <select onchange="updateRow(${i},'status',this.value)">
+          ${STATUSES.map(s => `<option ${(row.status||'Active')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input value="${esc(row.department)}" onchange="updateRow(${i},'department',this.value)" placeholder="e.g. IT"></td>
+      <td><input value="${esc(row.owner)}" onchange="updateRow(${i},'owner',this.value)" placeholder="e.g. TFPC"></td>
+      <td><input value="${esc(row.remarks)}" onchange="updateRow(${i},'remarks',this.value)" placeholder=""></td>
       <td>${row.source ? `<span class="source-badge">${esc(row.source)}</span>` : ''}</td>
       <td><button class="del-row" onclick="deleteRow(${i})">✕</button></td>
     `;
@@ -523,7 +537,7 @@ function renderTable() {
   });
   const newAddRow = document.createElement('tr');
   newAddRow.className = 'add-row-row';
-  newAddRow.innerHTML = '<td colspan="11"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
+  newAddRow.innerHTML = '<td colspan="15"><button class="add-row-btn" id="inlineAddBtn">+ Add row</button></td>';
   newAddRow.querySelector('button').addEventListener('click', addEmptyRow);
   tableBody.appendChild(newAddRow);
   exportBtn.disabled = rows.length === 0;
@@ -588,7 +602,7 @@ function updateRow(i, field, val) {
   row[field] = val;
   // Track manual corrections of OCR-extracted fields
   if (row._confidence === 'ocr' && oldVal !== val && val !== ''
-      && (field === 'serialNumber' || field === 'partNumber' || field === 'category' || field === 'manufacturer')) {
+      && (field === 'serialNumber' || field === 'description' || field === 'assetType' || field === 'brand')) {
     row._confidence = 'manual_override';
     auditLog.push({
       ts: new Date().toISOString(), engineer: getEngineer(), action: 'override',
@@ -601,7 +615,7 @@ function updateRow(i, field, val) {
 }
 function deleteRow(i) { rows.splice(i, 1); renderTable(); }
 function addEmptyRow() {
-  rows.push({ rack: '', startU: '', endU: '', category: 'Server', manufacturer: '', partNumber: '', serialNumber: '', notes: '', source: '', _confidence: 'manual', _scannedBy: getEngineer(), _scannedAt: new Date().toISOString() });
+  rows.push({ rack: '', startU: '', endU: '', assetType: 'Compute', brand: '', description: '', serialNumber: '', assetLocation: '', status: 'Active', department: '', owner: '', remarks: '', source: '', _confidence: 'manual', _scannedBy: getEngineer(), _scannedAt: new Date().toISOString() });
   renderTable();
   // focus first cell of new row
   const trs = tableBody.querySelectorAll('tr:not(.add-row-row)');
@@ -708,14 +722,14 @@ function parseOCRText(ocrText) {
   let category = 'Other';
   const tl = t.toLowerCase();
   if (/proliant|poweredge|primergy|thinkserver|ucs\s*c|blade/.test(tl)) category = 'Server';
-  else if (/catalyst|nexus|arista|juniper|ex\d|qfx|switch|sfp/.test(tl)) category = 'Network Switch';
+  else if (/catalyst|nexus|arista|juniper|ex\d|qfx|switch|sfp/.test(tl)) category = 'Network';
   else if (/ups|uninterruptible|powerware|symmetra|apc/.test(tl)) category = 'UPS';
   else if (/powervault|msa|ds\d{4}|storage|array/.test(tl)) category = 'Storage';
   else if (/pdu|power\s*distribution/.test(tl)) category = 'PDU';
   else if (/kvm|avocent|raritan/.test(tl)) category = 'KVM';
 
   // Manufacturer — keyword match against known brands
-  let manufacturer = '';
+  let brand = '';
   const mfrPatterns = [
     [/\bhewlett[\s-]packard\b|\b(?:hp|hpe)\b/i, 'HPE'],
     [/\bdell\b/i, 'Dell'],
@@ -741,14 +755,14 @@ function parseOCRText(ocrText) {
     [/\bamd\b/i, 'AMD'],
   ];
   for (const [re, name] of mfrPatterns) {
-    if (re.test(t)) { manufacturer = name; break; }
+    if (re.test(t)) { brand = name; break; }
   }
 
   // Hostname / asset tag hints
   const hostMatch = t.match(/(?:hostname|host|asset|tag)[\s:]+(\S+)/i);
   if (hostMatch) notes = hostMatch[1].trim();
 
-  return { serialNumber, partNumber, category, manufacturer, notes };
+  return { serialNumber, description: partNumber, assetType: category, brand, notes };
 }
 
 function stripJpegMetadata(base64) {
@@ -868,14 +882,14 @@ async function prepareImage(dataUrl) {
 async function callAIBuilder(flowUrl, dataUrl) {
   const { base64, mimeType } = await prepareImage(dataUrl);
   const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg' });
-  const { serialNumber, partNumber, category, manufacturer, notes } = parseOCRText(ocrText);
+  const { serialNumber, description, assetType, brand, notes } = parseOCRText(ocrText);
   const engineer = getEngineer();
   const ts = new Date().toISOString();
   pushAudit('scan', '', '', serialNumber, 'ocr');
   // Raw photo upload — rack/U unknown, user fills in
   return [{
     rack: '', startU: '', endU: '',
-    category, manufacturer, partNumber, serialNumber, notes,
+    assetType, brand, description, serialNumber, assetLocation: '', status: 'Active', department: '', owner: '', remarks: notes,
     source: '',
     _confidence: 'ocr', _scannedBy: engineer, _scannedAt: ts
   }];
@@ -948,8 +962,8 @@ exportBtn.addEventListener('click', () => {
   const exportData = filteredRows();
   if (!exportData.length) { toast('No rows match the selected racks', 'error'); return; }
   const wsData = [
-    ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...exportData.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
+    ['Rack ID', 'Brand', 'RackUStart', 'RackUEnd', 'Description', 'Serialnum', 'AssetType', 'Asset Location 1', 'Status', 'Department', 'Owner', 'Remarks', 'Source Image'],
+    ...exportData.map(r => [r.rack, r.brand||'', r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.description||'', r.serialNumber||'', r.assetType||r.category||'', r.assetLocation||'', r.status||'Active', r.department||'', r.owner||'', r.remarks||r.notes||'', r.source||''])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
@@ -992,8 +1006,8 @@ function sanitizeFilename(s) {
 function buildExcelBlob() {
   const exportData = filteredRows();
   const wsData = [
-    ['Rack #', 'Start U', 'End U', 'Category', 'Manufacturer', 'Part Number', 'Serial Number', 'Notes', 'Source Image'],
-    ...exportData.map(r => [r.rack, r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.category, r.manufacturer ?? '', r.partNumber, r.serialNumber, r.notes, r.source])
+    ['Rack ID', 'Brand', 'RackUStart', 'RackUEnd', 'Description', 'Serialnum', 'AssetType', 'Asset Location 1', 'Status', 'Department', 'Owner', 'Remarks', 'Source Image'],
+    ...exportData.map(r => [r.rack, r.brand||'', r.startU ? Number(r.startU) : '', r.endU ? Number(r.endU) : '', r.description||'', r.serialNumber||'', r.assetType||r.category||'', r.assetLocation||'', r.status||'Active', r.department||'', r.owner||'', r.remarks||r.notes||'', r.source||''])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [12, 8, 8, 16, 18, 22, 22, 24, 20].map(w => ({ wch: w }));
@@ -1041,7 +1055,7 @@ function collectAllPhotos() {
     // Equipment item photos
     (s.items || []).forEach(item => {
       const uStr = item.startU === item.endU ? `U${item.startU}` : `U${item.startU}-${item.endU}`;
-      const base = `${sanitizeFilename(rack)}/${sanitizeFilename(uStr)}-${sanitizeFilename(item.category || 'item')}`;
+      const base = `${sanitizeFilename(rack)}/${sanitizeFilename(uStr)}-${sanitizeFilename(item.assetType || item.category || 'item')}`;
       (item.photos || []).forEach((dataUrl, i) =>
         photos.push({ dataUrl, filename: `photos/${base}-${i + 1}.jpg` }));
       if (item.serialPhoto)
@@ -1176,11 +1190,15 @@ function importSessionDirect(si) {
       rack: s.rackId,
       startU: String(item.startU),
       endU: String(item.endU),
-      category: item.category || '',
-      manufacturer: item.manufacturer || '',
-      partNumber: item.partNumber || '',
+      assetType: item.assetType || item.category || '',
+      brand: item.brand || item.manufacturer || '',
+      description: item.description || item.partNumber || '',
       serialNumber: item.serialNumber || '',
-      notes: item.notes || '',
+      assetLocation: item.assetLocation || '',
+      status: item.status || 'Active',
+      department: item.department || '',
+      owner: item.owner || '',
+      remarks: item.remarks || item.notes || '',
       source: s.rackId,
       _confidence: conf, _scannedBy: engineer, _scannedAt: ts
     };
@@ -1188,8 +1206,8 @@ function importSessionDirect(si) {
       // Merge — only fill blanks
       const ex = rows[existingIdx];
       if (!ex.serialNumber && row.serialNumber) ex.serialNumber = row.serialNumber;
-      if (!ex.partNumber   && row.partNumber)   ex.partNumber   = row.partNumber;
-      if (!ex.manufacturer && row.manufacturer) ex.manufacturer = row.manufacturer;
+      if (!ex.description  && row.description)  ex.description  = row.description;
+      if (!ex.brand        && row.brand)         ex.brand        = row.brand;
       pushAudit('merge', s.rackId, uStr, row.serialNumber, conf);
     } else {
       rows.push(row);
@@ -1212,7 +1230,7 @@ function buildSessionQueue(si) {
   const items = s.items.filter(item => item.photos?.length > 0);
   const queuedImages = [];
   items.forEach(item => {
-    const meta = { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), category: item.category, notes: item.notes || '' };
+    const meta = { rack: s.rackId, startU: String(item.startU), endU: String(item.endU), assetType: item.assetType || item.category, brand: item.brand || '', description: item.description || item.partNumber || '', assetLocation: item.assetLocation || '', status: item.status || 'Active', department: item.department || '', owner: item.owner || '', remarks: item.remarks || item.notes || '' };
     const uStr = item.startU !== item.endU ? `U${item.startU}-${item.endU}` : `U${item.startU}`;
     item.photos.forEach((dataUrl, pi) => {
       queuedImages.push({ dataUrl, label: `${s.rackId} ${uStr} #${pi+1}`, meta, status: 'ready' });
@@ -1332,9 +1350,9 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   // Rack/U/category already known from field app — just extract part # and serial # from OCR
   const { base64, mimeType } = await prepareImage(dataUrl);
   const ocrText = await callFlow(flowUrl, base64, mimeType, { fileName: 'photo.jpg', rackId: meta.rack });
-  const { serialNumber, partNumber, manufacturer, category: ocrCategory, notes: ocrNotes } = parseOCRText(ocrText);
-  // Use OCR category only if the engineer left it as 'Other' and OCR detected something specific
-  const category = (meta.category === 'Other' && ocrCategory !== 'Other') ? ocrCategory : meta.category;
+  const { serialNumber, description, assetType: ocrAssetType, brand, notes: ocrNotes } = parseOCRText(ocrText);
+  // Use OCR assetType only if the engineer left it as 'Other' and OCR detected something specific
+  const assetType = ((meta.assetType||meta.category) === 'Other' && ocrAssetType !== 'Other') ? ocrAssetType : (meta.assetType || meta.category || 'Other');
   const engineer = getEngineer();
   const ts = new Date().toISOString();
   const uStr = meta.startU === meta.endU ? meta.startU : `${meta.startU}-${meta.endU}`;
@@ -1343,11 +1361,11 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
   const existingIdx = rows.findIndex(r => r.rack === meta.rack && r.startU === meta.startU && r.endU === meta.endU);
   if (existingIdx !== -1) {
     const existing = rows[existingIdx];
-    if (!existing.manufacturer && manufacturer) existing.manufacturer = manufacturer;
-    if (!existing.partNumber && partNumber) existing.partNumber = partNumber;
+    if (!existing.brand && brand) existing.brand = brand;
+    if (!existing.description && description) existing.description = description;
     if (!existing.serialNumber && serialNumber) existing.serialNumber = serialNumber;
-    if (existing.category === 'Other' && category !== 'Other') existing.category = category;
-    if (ocrNotes && !existing.notes.includes(ocrNotes)) existing.notes = [existing.notes, ocrNotes].filter(Boolean).join('; ');
+    if ((existing.assetType||existing.category) === 'Other' && assetType !== 'Other') existing.assetType = assetType;
+    if (ocrNotes && !(existing.remarks||'').includes(ocrNotes)) existing.remarks = [existing.remarks, ocrNotes].filter(Boolean).join('; ');
     pushAudit('merge', meta.rack, uStr, serialNumber, 'ocr');
     return null; // row updated in place
   }
@@ -1357,11 +1375,15 @@ async function callAIBuilderWithMeta(flowUrl, dataUrl, meta) {
     rack: meta.rack,
     startU: meta.startU,
     endU: meta.endU,
-    category,
-    manufacturer,
-    partNumber,
+    assetType,
+    brand,
+    description,
     serialNumber,
-    notes: [meta.notes, ocrNotes].filter(Boolean).join('; '),
+    assetLocation: meta.assetLocation || '',
+    status: meta.status || 'Active',
+    department: meta.department || '',
+    owner: meta.owner || '',
+    remarks: [meta.remarks || meta.notes, ocrNotes].filter(Boolean).join('; '),
     source: meta.rack,
     _confidence: 'ocr', _scannedBy: engineer, _scannedAt: ts
   };

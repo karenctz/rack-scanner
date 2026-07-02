@@ -239,15 +239,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
 
     <div class="field">
-      <label>Category</label>
+      <label>Asset Type</label>
       <select id="item-category">
-        <option>Server</option>
-        <option>Network Switch</option>
-        <option>UPS</option>
-        <option>Storage</option>
-        <option>PDU</option>
-        <option>KVM</option>
-        <option>Other</option>
+        <option>Compute</option>
+        <option>Network</option>
+        <option>Backup</option>
+        <option>IP Telephone</option>
       </select>
     </div>
 
@@ -264,9 +261,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       </div>
     </div>
 
-    <!-- Part number with barcode scan button -->
+    <!-- Description with barcode scan button -->
     <div style="margin-bottom:16px">
-      <label style="display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase">Part Number <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <label style="display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <div class="field-with-btn">
         <div class="field">
           <input id="item-part" type="text" placeholder="Scan barcode or type…" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-family:monospace">
@@ -277,8 +274,35 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       </div>
     </div>
 
+    <div class="field-row">
+      <div class="field">
+        <label>Status</label>
+        <select id="item-status">
+          <option>Active</option>
+          <option>Decommissioned</option>
+          <option>Powered Off</option>
+          <option>Temporary</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Asset Location</label>
+        <input id="item-location" type="text" placeholder="e.g. RDC" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Department</label>
+        <input id="item-department" type="text" placeholder="e.g. IT" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Owner</label>
+        <input id="item-owner" type="text" placeholder="e.g. TFPC" autocomplete="off">
+      </div>
+    </div>
+
     <div class="field">
-      <label>Notes (optional)</label>
+      <label>Remarks (optional)</label>
       <input id="item-notes" type="text" placeholder="Hostname, asset tag…" autocomplete="off">
     </div>
 
@@ -481,24 +505,24 @@ function renderItemCard(item, i) {
     `<img class="item-thumb" src="${p}" onclick="openPhotoViewer('item',${i},${pi})" alt="">`
   ).join('');
   const hasSerial = !!item.serialNumber;
-  const hasPart   = !!item.partNumber;
+  const hasDesc   = !!item.description;
 
   return `
     <div class="item-card">
       <div class="item-card-header">
         <div class="item-card-u">${uLabel}</div>
         <div class="item-card-info">
-          <h4>${esc(item.category)}</h4>
-          <p>${esc(item.notes) || (photoCount + ' photo' + (photoCount!==1?'s':''))}</p>
+          <h4>${esc(item.assetType || item.category)}</h4>
+          <p>${esc(item.brand) || esc(item.remarks || item.notes) || (photoCount + ' photo' + (photoCount!==1?'s':''))}</p>
         </div>
         <div>
           <button class="icon-btn" onclick="openItemSheet(${i})">✏️</button>
         </div>
       </div>
-      ${hasSerial || hasPart || item.serialPhoto ? `
+      ${hasSerial || hasDesc || item.serialPhoto ? `
       <div class="item-scanned-row">
         ${hasSerial ? `<span class="scanned-chip">S/N: ${esc(item.serialNumber)}</span>` : ''}
-        ${hasPart   ? `<span class="scanned-chip part">P/N: ${esc(item.partNumber)}</span>` : ''}
+        ${hasDesc   ? `<span class="scanned-chip part">Desc: ${esc(item.description)}</span>` : ''}
         ${!hasSerial && item.serialPhoto ? `<span class="scanned-chip" style="background:#2a2010;color:var(--yellow)">📷 S/N photo – OCR at desktop</span>` : ''}
       </div>` : ''}
       ${photoCount ? `
@@ -570,10 +594,14 @@ function openItemSheet(itemIdx) {
   const item = itemIdx !== null ? s.items[itemIdx] : null;
 
   document.getElementById('item-sheet-title').textContent = item ? 'Edit Equipment' : 'Add Equipment';
-  document.getElementById('item-category').value = item?.category ?? 'Server';
-  document.getElementById('item-serial').value   = item?.serialNumber ?? '';
-  document.getElementById('item-part').value     = item?.partNumber   ?? '';
-  document.getElementById('item-notes').value    = item?.notes        ?? '';
+  document.getElementById('item-category').value   = item?.assetType ?? item?.category ?? 'Compute';
+  document.getElementById('item-serial').value     = item?.serialNumber ?? '';
+  document.getElementById('item-part').value       = item?.description  ?? item?.partNumber ?? '';
+  document.getElementById('item-notes').value      = item?.remarks      ?? item?.notes ?? '';
+  document.getElementById('item-status').value     = item?.status       ?? 'Active';
+  document.getElementById('item-location').value   = item?.assetLocation ?? '';
+  document.getElementById('item-department').value = item?.department   ?? '';
+  document.getElementById('item-owner').value      = item?.owner        ?? '';
   document.getElementById('delete-item-btn').style.display = item ? 'block' : 'none';
 
   // Auto-populate U position for new items
@@ -607,7 +635,7 @@ function openItemSheet(itemIdx) {
   }
 
   document.getElementById('scan-serial-btn').classList.toggle('scanned', !!(item?.serialNumber));
-  document.getElementById('scan-part-btn').classList.toggle('scanned', !!(item?.partNumber));
+  document.getElementById('scan-part-btn').classList.toggle('scanned', !!(item?.description ?? item?.partNumber));
 
   itemSheetSerialPhoto = item?.serialPhoto || null;
   itemSheetPhotos = [...(item?.photos || [])];
@@ -664,13 +692,17 @@ document.getElementById('save-item-btn').addEventListener('click', () => {
   const s = sessions[currentSessionIdx];
   const item = {
     startU, endU: Math.max(startU, endU),
-    category:     document.getElementById('item-category').value,
-    serialNumber: document.getElementById('item-serial').value.trim(),
-    partNumber:   document.getElementById('item-part').value.trim(),
-    notes:        document.getElementById('item-notes').value.trim(),
-    photos:       [...itemSheetPhotos],
-    serialPhoto:  itemSheetSerialPhoto || null,
-    addedAt:      Date.now()
+    assetType:     document.getElementById('item-category').value,
+    serialNumber:  document.getElementById('item-serial').value.trim(),
+    description:   document.getElementById('item-part').value.trim(),
+    remarks:       document.getElementById('item-notes').value.trim(),
+    status:        document.getElementById('item-status').value,
+    assetLocation: document.getElementById('item-location').value.trim(),
+    department:    document.getElementById('item-department').value.trim(),
+    owner:         document.getElementById('item-owner').value.trim(),
+    photos:        [...itemSheetPhotos],
+    serialPhoto:   itemSheetSerialPhoto || null,
+    addedAt:       Date.now()
   };
 
   if (editingItemIdx !== null) {
@@ -720,7 +752,7 @@ function openPhotoViewer(type, itemIdx, photoIdx) {
   } else {
     const item = s.items[itemIdx];
     src = item.photos[photoIdx];
-    label = `U${item.startU}${item.startU!==item.endU?'–'+item.endU:''} ${item.category} · ${photoIdx+1}/${item.photos.length}`;
+    label = `U${item.startU}${item.startU!==item.endU?'–'+item.endU:''} ${item.assetType||item.category} · ${photoIdx+1}/${item.photos.length}`;
     viewerContext = { type: 'item', itemIdx, photoIdx };
   }
   document.getElementById('viewer-img').src = src;

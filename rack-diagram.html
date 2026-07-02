@@ -120,8 +120,13 @@ function esc(v) {
 }
 
 const CATEGORY_COLORS = {
+  'Compute':        '#2563eb',
+  'Network':        '#16a34a',
+  'Backup':         '#7c3aed',
+  'IP Telephone':   '#ca8a04',
   'Server':         '#2563eb',
   'Network Switch': '#16a34a',
+  'Infosec':        '#0891b2',
   'UPS':            '#ea580c',
   'Storage':        '#7c3aed',
   'PDU':            '#dc2626',
@@ -161,14 +166,18 @@ function handleFile(file) {
         const norm = {};
         Object.keys(r).forEach(k => { norm[k.trim()] = r[k]; });
         return {
-          rack:         String(norm['Rack #'] || norm['Rack'] || '').trim(),
-          startU:       parseInt(norm['Start U'] || norm['StartU'] || 0),
-          endU:         parseInt(norm['End U']   || norm['EndU']   || 0),
-          category:     String(norm['Category'] || 'Other').trim(),
-          manufacturer: String(norm['Manufacturer'] || '').trim(),
-          partNumber:   String(norm['Part Number'] || '').trim(),
-          serialNumber: String(norm['Serial Number'] || '').trim(),
-          notes:        String(norm['Notes'] || '').trim(),
+          rack:         String(norm['Rack ID'] || norm['Rack #'] || norm['Rack'] || '').trim(),
+          startU:       parseInt(norm['RackUStart'] || norm['RackUstart'] || norm['Start U'] || norm['StartU'] || 0),
+          endU:         parseInt(norm['RackUEnd']   || norm['RackUend']   || norm['End U']   || norm['EndU']   || 0),
+          assetType:    String(norm['AssetType'] || norm['Asset Type'] || norm['Category'] || 'Compute').trim(),
+          brand:        String(norm['Brand'] || norm['Manufacturer'] || '').trim(),
+          description:  String(norm['Description'] || norm['Part Number'] || '').trim(),
+          serialNumber: String(norm['Serialnum'] || norm['Serial Number'] || '').trim(),
+          assetLocation:String(norm['Asset Location 1'] || norm['Asset Location'] || '').trim(),
+          status:       String(norm['Status'] || 'Active').trim(),
+          department:   String(norm['Department'] || '').trim(),
+          owner:        String(norm['Owner'] || '').trim(),
+          remarks:      String(norm['Remarks'] || norm['Notes'] || '').trim(),
         };
       }).filter(r => r.rack && !isNaN(r.startU) && r.startU > 0);
       if (!loadedRows.length) { alert('No valid rack data found in this file. Make sure you are using the exported rack-assets Excel.'); return; }
@@ -198,7 +207,7 @@ function render() {
   });
 
   // Legend
-  const usedCats = [...new Set(loadedRows.map(r => r.category))];
+  const usedCats = [...new Set(loadedRows.map(r => r.assetType || r.category))];
   const legendEl = document.createElement('div');
   legendEl.className = 'legend';
   legendEl.innerHTML = usedCats.map(c =>
@@ -292,7 +301,7 @@ function buildRackView(rackId, items, rackHeight, unitPx, label, isRear) {
 
     for (let u = s; u <= e; u++) occupied.add(u);
 
-    const color = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
+    const color = CATEGORY_COLORS[item.assetType || item.category] || CATEGORY_COLORS.Other;
     const el = document.createElement('div');
     el.className = 'rack-item';
     el.style.cssText = `top:${top}px;height:${h}px;background:${color}cc;`;
@@ -307,15 +316,15 @@ function buildRackView(rackId, items, rackHeight, unitPx, label, isRear) {
       el.innerHTML = `
         <span class="item-u" style="margin-left:auto">${esc(uLabel)}</span>
         <div class="item-label" style="text-align:right;margin-left:auto">
-          <span class="item-cat">${esc(item.category)}</span>
-          ${showMfr ? `<span class="item-mfr">${esc(item.manufacturer)}</span>` : ''}
+          <span class="item-cat">${esc(item.assetType || item.category)}</span>
+          ${showMfr ? `<span class="item-mfr">${esc(item.brand || item.manufacturer)}</span>` : ''}
           ${showSn  ? `<span class="item-sn">${esc(item.serialNumber)}</span>`  : ''}
         </div>`;
     } else {
       el.innerHTML = `
         <div class="item-label">
-          <span class="item-cat">${esc(item.category)}</span>
-          ${showMfr ? `<span class="item-mfr">${esc(item.manufacturer)}</span>` : ''}
+          <span class="item-cat">${esc(item.assetType || item.category)}</span>
+          ${showMfr ? `<span class="item-mfr">${esc(item.brand || item.manufacturer)}</span>` : ''}
           ${showSn  ? `<span class="item-sn">${esc(item.serialNumber)}</span>`  : ''}
         </div>
         <span class="item-u">${esc(uLabel)}</span>`;
@@ -343,12 +352,14 @@ function attachTooltips() {
       const item = JSON.parse(el.dataset.item);
       const uLabel = item.startU === item.endU ? `U${item.startU}` : `U${item.startU}–${item.endU}`;
       tip.innerHTML = `
-        <strong>${esc(item.category)}</strong>
+        <strong>${esc(item.assetType || item.category)}</strong>
         <div class="tt-row">Position: <span>${esc(uLabel)}</span></div>
-        ${item.manufacturer ? `<div class="tt-row">Manufacturer: <span>${esc(item.manufacturer)}</span></div>` : ''}
-        ${item.partNumber   ? `<div class="tt-row">Part #: <span style="font-family:monospace">${esc(item.partNumber)}</span></div>` : ''}
+        ${(item.brand||item.manufacturer) ? `<div class="tt-row">Brand: <span>${esc(item.brand||item.manufacturer)}</span></div>` : ''}
+        ${(item.description||item.partNumber) ? `<div class="tt-row">Description: <span style="font-family:monospace">${esc(item.description||item.partNumber)}</span></div>` : ''}
         ${item.serialNumber ? `<div class="tt-row">Serial #: <span style="font-family:monospace">${esc(item.serialNumber)}</span></div>` : ''}
-        ${item.notes        ? `<div class="tt-row">Notes: <span>${esc(item.notes)}</span></div>` : ''}`;
+        ${item.status       ? `<div class="tt-row">Status: <span>${esc(item.status)}</span></div>` : ''}
+        ${item.department   ? `<div class="tt-row">Dept: <span>${esc(item.department)}</span></div>` : ''}
+        ${(item.remarks||item.notes) ? `<div class="tt-row">Remarks: <span>${esc(item.remarks||item.notes)}</span></div>` : ''}`;
       tip.style.display = 'block';
       moveTip(e);
     });
