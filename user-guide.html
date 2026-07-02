@@ -305,7 +305,7 @@
   <div class="toc-card">
     <h3>Contents</h3>
     <ol>
-      <li><a href="#overview">System Overview</a></li>
+      <li><a href="#overview">System Overview &amp; Pre-Survey Checklist</a></li>
       <li><a href="#field-app">Field App — Capturing Rack Data On-Site</a></li>
       <li><a href="#desktop-app">Desktop Scanner — OCR Processing &amp; Excel Export</a></li>
       <li><a href="#rack-diagram">Rack Diagram Visualiser — Front &amp; Rear Views</a></li>
@@ -372,6 +372,17 @@
     <span class="callout-icon">💡</span>
     <p><strong>No install needed.</strong> Everything runs in your browser. Bookmark the field app URL on your phone's home screen for quick access on site.</p>
   </div>
+
+  <!-- Pre-survey checklist -->
+  <h3 style="color:#fff;font-size:16px;margin-bottom:12px;margin-top:32px;">Before you go in — Pre-Survey Checklist</h3>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Phone charged to at least 50%</span></div>
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Field App bookmarked or added to home screen</span></div>
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Know the Rack IDs you are surveying today</span></div>
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Torch or phone torch available (rack interiors are often dark)</span></div>
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Enough phone storage for photos (each rack session is roughly 50–100 MB)</span></div>
+    <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted)"><div style="width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:2px"></div><span>Power Automate Flow URL and API Key on hand (needed for desktop processing later)</span></div>
+  </div>
 </div>
 
 <!-- ═══════════════════ FIELD APP SECTION ═══════════════════ -->
@@ -417,7 +428,7 @@
         <h3>Create a new rack survey</h3>
         <p>Tap the <strong>blue + button</strong> in the bottom-right corner. Enter the rack details:</p>
         <ul>
-          <li><strong>Rack #</strong> — the rack label (e.g. <code>DC-A-01</code>)</li>
+          <li><strong>Rack ID</strong> — the rack label (e.g. <code>DC-A-01</code>)</li>
           <li><strong>Location</strong> — room or data hall (e.g. <code>Floor 3, Hall B</code>)</li>
           <li><strong>Total U</strong> — rack height (e.g. <code>42</code>)</li>
         </ul>
@@ -431,13 +442,16 @@
         <h3>Add items to a rack</h3>
         <p>Tap on a rack to open it, then tap <strong>+ Add Item</strong> to log each piece of equipment. For each item:</p>
         <ul>
-          <li><strong>Start U / End U</strong> — U position in the rack (app auto-suggests the next free slot based on whether you're working top-down or bottom-up)</li>
-          <li><strong>Category</strong> — Server, Network Switch, UPS, Storage, PDU, KVM, or Other</li>
-          <li><strong>Manufacturer / Part Number</strong> — fill in what you know</li>
-          <li><strong>Serial Number</strong> — tap the scan button to read a barcode, or type manually</li>
-          <li><strong>Part Number</strong> — tap the scan button to read a barcode, or type manually</li>
+          <li><strong>RackUStart / RackUEnd</strong> — U position in the rack (app auto-suggests the next free slot based on whether you're working top-down or bottom-up)</li>
+          <li><strong>AssetType</strong> — Compute, Network, Backup, or IP Telephone</li>
+          <li><strong>Brand</strong> — manufacturer name (e.g. HPE, Cisco, APC)</li>
+          <li><strong>Serialnum</strong> — tap the scan button to read a barcode, or type manually</li>
+          <li><strong>Description</strong> — tap the scan button to read a barcode, or type manually</li>
+          <li><strong>Status</strong> — Active, Decommissioned, Powered Off, or Temporary</li>
+          <li><strong>Asset Location 1</strong> — physical location code (e.g. RDC)</li>
+          <li><strong>Department / Owner</strong> — responsible team and owner name</li>
           <li><strong>Photo</strong> — take a photo of the equipment label (used later for AI OCR on the desktop)</li>
-          <li><strong>Notes</strong> — any extra notes</li>
+          <li><strong>Remarks</strong> — any extra notes (hostname, asset tag, etc.)</li>
         </ul>
         <div class="callout callout-tip">
           <span class="callout-icon">💡</span>
@@ -450,13 +464,13 @@
       <div class="step-num">4</div>
       <div class="step-body">
         <h3>Scan barcodes directly</h3>
-        <p>Both the <strong>Serial Number</strong> and <strong>Part Number</strong> fields have a barcode scan button (the barcode icon on the right). Tap either one to open the camera scanner, which reads 1D and 2D barcodes automatically. When a barcode is detected:</p>
+        <p>Both the <strong>Serialnum</strong> and <strong>Description</strong> fields have a barcode scan button (the barcode icon on the right). Tap either one to open the camera scanner, which reads 1D and 2D barcodes automatically. When a barcode is detected:</p>
         <ul>
           <li>The correct field fills in automatically</li>
           <li>The camera closes</li>
           <li>The scan button turns <strong style="color:var(--green)">green</strong> to confirm the scan</li>
         </ul>
-        <p>This is especially useful on equipment that has separate S/N and P/N barcodes on the label — you can scan both without typing anything.</p>
+        <p>This is especially useful on equipment that has separate serial number and description barcodes on the label — you can scan both without typing anything.</p>
         <div class="callout callout-warn">
           <span class="callout-icon">⚠️</span>
           <p><strong>Android only:</strong> Barcode scanning uses the native Chrome BarcodeDetector API — it works best on Android Chrome. On iPhone you'll need to enter numbers manually or take photos for desktop OCR.</p>
@@ -541,10 +555,10 @@
         <h3>Run AI scanning</h3>
         <p>Click <strong>Scan with AI Builder</strong>. The app sends each photo to Microsoft AI Builder (via Power Automate), which reads the text on the equipment labels and extracts:</p>
         <ul>
-          <li>Serial Number</li>
-          <li>Part Number</li>
-          <li>Manufacturer</li>
-          <li>Category (auto-detected from label text)</li>
+          <li>Serialnum</li>
+          <li>Description</li>
+          <li>Brand</li>
+          <li>AssetType (auto-detected from label text)</li>
         </ul>
         <p>Results appear in the table row by row as each photo is processed. A progress counter shows how many remain.</p>
         <div class="callout callout-warn">
@@ -594,7 +608,7 @@
         </ul>
         <div class="callout callout-tip">
           <span class="callout-icon">💡</span>
-          <p>The export validates your data first. If any rows are missing a Rack # or Serial Number, you'll see a warning asking you to fix them before continuing.</p>
+          <p>The export validates your data first. If any rows are missing a Rack ID or Serialnum, you'll see a warning asking you to fix them before continuing.</p>
         </div>
       </div>
     </div>
@@ -688,7 +702,7 @@
         <p>Use the <strong>Rack Height</strong> dropdown (24U / 36U / 42U / 48U) to match your physical racks. You can also change the <strong>px per U</strong> value to make diagrams taller or shorter on screen.</p>
         <div class="callout callout-tip" style="margin-top:10px;">
           <span class="callout-icon">💡</span>
-          <p>If items appear clipped or overflow the rack, set Rack Height to a larger value than the highest End U in your data.</p>
+          <p>If items appear clipped or overflow the rack, set Rack Height to a larger value than the highest RackUEnd in your data.</p>
         </div>
       </div>
     </div>
@@ -744,7 +758,7 @@
       <h3 style="color:#fff;margin-bottom:8px;">🔍 Barcode scanner not detecting</h3>
       <ul style="color:var(--muted);margin-left:20px;">
         <li>Barcode scanning requires <strong>Android Chrome</strong> — it does not work on iPhone or desktop browsers</li>
-        <li>Both <strong>Serial Number</strong> and <strong>Part Number</strong> fields have a scan button — tap the one for the field you want to fill</li>
+        <li>Both <strong>Serialnum</strong> and <strong>Description</strong> fields have a scan button — tap the one for the field you want to fill</li>
         <li>Make sure you <strong>granted camera permission</strong> when the browser asked</li>
         <li>Hold the barcode <strong>steady</strong> in the camera frame — the scanner needs about 1–2 seconds to lock on</li>
         <li>If the scanner opens but never detects, try moving <strong>closer or further</strong> from the barcode</li>
@@ -792,7 +806,7 @@
       <h3 style="color:#fff;margin-bottom:8px;">📊 Rack diagram is missing some equipment</h3>
       <ul style="color:var(--muted);margin-left:20px;">
         <li>The diagram reads from the <strong>Asset Inventory</strong> sheet in the Excel file — make sure you're loading the correct export</li>
-        <li>Items without a <strong>Rack #</strong> or valid <strong>Start U / End U</strong> values are not drawn</li>
+        <li>Items without a <strong>Rack ID</strong> or valid <strong>RackUStart / RackUEnd</strong> values are not drawn</li>
         <li>Check that the U values in the spreadsheet are numbers, not text</li>
       </ul>
     </div>
@@ -867,7 +881,7 @@
         </div>
         <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;">
           <strong style="color:#fff;">3. Excel → Rack Diagram</strong>
-          <p style="color:var(--muted);margin-top:4px;">The rack diagram reads the exported <code>.xlsx</code> directly in the browser using SheetJS — no server upload required. It groups rows by Rack # and maps each item's Start U / End U to a pixel position in the SVG diagram.</p>
+          <p style="color:var(--muted);margin-top:4px;">The rack diagram reads the exported <code>.xlsx</code> directly in the browser using SheetJS — no server upload required. It groups rows by Rack ID and maps each item's RackUStart / RackUEnd to a pixel position in the SVG diagram.</p>
         </div>
       </div>
     </div>
@@ -878,10 +892,10 @@
       <p style="color:var(--muted);margin-bottom:12px;">When you click <strong style="color:var(--text)">Scan with AI Builder</strong>, each photo is sent as raw binary to a <strong style="color:var(--text)">Microsoft Power Automate flow</strong>. The flow passes the image to <strong style="color:var(--text)">AI Builder Text Recognizer</strong>, which reads every character printed on the label and returns the full extracted text.</p>
       <p style="color:var(--muted);margin-bottom:12px;">The desktop app then parses that raw text using pattern matching to pull out:</p>
       <ul style="color:var(--muted);margin-left:20px;margin-bottom:12px;">
-        <li><strong style="color:var(--text)">Serial Number</strong> — looks for patterns like <code>S/N:</code>, <code>SN:</code>, <code>Serial:</code> followed by an alphanumeric string</li>
-        <li><strong style="color:var(--text)">Part Number</strong> — looks for <code>P/N:</code>, <code>PN:</code>, <code>Part No:</code> patterns</li>
-        <li><strong style="color:var(--text)">Manufacturer</strong> — matched against a known list (HP, Dell, Cisco, etc.)</li>
-        <li><strong style="color:var(--text)">Category</strong> — inferred from keywords in the OCR text (e.g. "Switch" → Network Switch, "UPS" → UPS)</li>
+        <li><strong style="color:var(--text)">Serialnum</strong> — looks for patterns like <code>S/N:</code>, <code>SN:</code>, <code>Serial:</code> followed by an alphanumeric string</li>
+        <li><strong style="color:var(--text)">Description</strong> — looks for <code>P/N:</code>, <code>PN:</code>, <code>Part No:</code>, <code>Model:</code> patterns</li>
+        <li><strong style="color:var(--text)">Brand</strong> — matched against a known list (HPE, Dell, Cisco, APC, etc.)</li>
+        <li><strong style="color:var(--text)">AssetType</strong> — inferred from keywords in the OCR text (e.g. "Switch" → Network, "UPS" → Backup)</li>
       </ul>
       <p style="color:var(--muted);">Photos are resized to a maximum of 1600px before sending and EXIF orientation is corrected automatically — so portrait phone photos arrive at the AI in the right orientation regardless of how you held the camera.</p>
     </div>
@@ -937,7 +951,7 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;">
       <h3 style="color:#fff;margin-bottom:12px;">🔍 Duplicate &amp; U-gap detection</h3>
       <p style="color:var(--muted);margin-bottom:12px;"><strong style="color:var(--text)">Duplicate detection</strong> runs automatically every time the table re-renders. It groups all rows by serial number and flags any serial number that appears in more than one row. An orange warning banner shows the duplicates so you can correct the wrong entry before exporting.</p>
-      <p style="color:var(--muted);"><strong style="color:var(--text)">U-gap detection</strong> groups rows by Rack # and checks whether the U positions in use cover the full rack continuously. Any contiguous block of U slots with no logged equipment is reported as a gap — meaning either that space is genuinely empty or an item was missed. The gap panel is collapsible and shown below the main table.</p>
+      <p style="color:var(--muted);"><strong style="color:var(--text)">U-gap detection</strong> groups rows by Rack ID and checks whether the U positions in use cover the full rack continuously. Any contiguous block of U slots with no logged equipment is reported as a gap — meaning either that space is genuinely empty or an item was missed. The gap panel is collapsible and shown below the main table.</p>
     </div>
 
     <!-- Audit trail -->
